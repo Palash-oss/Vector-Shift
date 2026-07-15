@@ -211,10 +211,9 @@ export const PipelineUI = () => {
               const midpoint = getEdgeMidpoint(edge);
               if (!midpoint) return null;
               
-              const clientPos = reactFlowInstance.flowToScreenPosition(midpoint);
-              const rect = reactFlowWrapper.current.getBoundingClientRect();
-              const left = clientPos.x - rect.left;
-              const top = clientPos.y - rect.top;
+              const { x: vpX, y: vpY, zoom: vpZoom } = reactFlowInstance.getViewport();
+              const left = midpoint.x * vpZoom + vpX;
+              const top = midpoint.y * vpZoom + vpY;
 
               return (
                 <div
@@ -237,13 +236,9 @@ export const PipelineUI = () => {
 
             {/* Render Chain-end persistent "+" buttons */}
             {reactFlowInstance && lastNodes.map((node) => {
-              const rect = reactFlowWrapper.current.getBoundingClientRect();
-              const clientPos = reactFlowInstance.flowToScreenPosition({
-                x: node.position.x + 110, // centered
-                y: node.position.y + 110, // positioned below the bottom border
-              });
-              const left = clientPos.x - rect.left;
-              const top = clientPos.y - rect.top;
+              const { x: vpX, y: vpY, zoom: vpZoom } = reactFlowInstance.getViewport();
+              const left = (node.position.x + 110) * vpZoom + vpX;
+              const top = (node.position.y + 110) * vpZoom + vpY;
 
               return (
                 <div
