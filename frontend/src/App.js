@@ -345,12 +345,11 @@ export default function App() {
     alert(`Successfully added '${newNode.data.customTitle}' to the visual canvas! Go to 'Flows' to inspect it.`);
   };
 
-  // Sidebar Items (Reports and Settings fully removed)
+  // Sidebar Items (Reports, Settings, and Connections fully removed)
   const sidebarItems = [
     { name: 'Flows', icon: '⚡' },
     { name: 'Prompts', icon: '📝' },
     { name: 'Data', icon: '📊' },
-    { name: 'Connections', icon: '🔌' },
     { name: 'Logs', icon: '📋' },
     { name: 'Deployments', icon: '🚀' },
     { name: 'Tests', icon: '🧪' },
@@ -947,65 +946,7 @@ export default function App() {
             </div>
           )}
 
-          {/* CONNECTIONS VIEW */}
-          {activeSidebarItem === 'Connections' && (
-            <div className="view-panel">
-              <div className="view-title-row">
-                <div>
-                  <h2 className="view-heading">Connected Integrations</h2>
-                  <p className="view-desc">Configure credential tokens and API integrations.</p>
-                </div>
-              </div>
 
-              <div className="connections-grid">
-                <div className="connection-card-premium">
-                  <div className="connection-header-row">
-                    <span className="connection-logo-icon">🤖</span>
-                    <div>
-                      <span className="connection-name">OpenAI API</span>
-                      <div style={{ fontSize: '0.75rem', color: '#56d364' }}>Connected</div>
-                    </div>
-                  </div>
-                  <input
-                    type="password"
-                    className="chat-text-input"
-                    value={openaiKey}
-                    onChange={(e) => setOpenaiKey(e.target.value)}
-                  />
-                  <button className="btn-select-repo" onClick={() => addLog('success', 'OpenAI API Credentials saved.')}>Save Secret</button>
-                </div>
-
-                <div className="connection-card-premium">
-                  <div className="connection-header-row">
-                    <span className="connection-logo-icon">🔮</span>
-                    <div>
-                      <span className="connection-name">Anthropic Claude</span>
-                      <div style={{ fontSize: '0.75rem', color: '#56d364' }}>Connected</div>
-                    </div>
-                  </div>
-                  <input
-                    type="password"
-                    className="chat-text-input"
-                    value={anthropicKey}
-                    onChange={(e) => setAnthropicKey(e.target.value)}
-                  />
-                  <button className="btn-select-repo" onClick={() => addLog('success', 'Anthropic Credentials saved.')}>Save Secret</button>
-                </div>
-
-                <div className="connection-card-premium">
-                  <div className="connection-header-row">
-                    <span className="connection-logo-icon">🐙</span>
-                    <div>
-                      <span className="connection-name">GitHub Integrator</span>
-                      <div style={{ fontSize: '0.75rem', color: '#56d364' }}>Connected</div>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '0.8rem', color: '#8b949e' }}>Repository: <strong>{githubRepo}</strong></div>
-                  <button className="btn-primary" onClick={() => setShowGitHubModal(true)}>Modify Repo</button>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* DEPLOYMENTS VIEW */}
           {activeSidebarItem === 'Deployments' && (
