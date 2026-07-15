@@ -12,8 +12,16 @@ export const LandingPage = ({ navigate }) => {
     // Enable body scroll for landing page
     document.body.style.overflow = 'auto';
 
-    // Initialize Locomotive Scroll v5 (global window viewport)
-    const scroll = new LocomotiveScroll();
+    // Delay initialization slightly to prevent duplicate instances in React 18 Strict Mode
+    let scroll;
+    const scrollTimer = setTimeout(() => {
+      scroll = new LocomotiveScroll({
+        lenisOptions: {
+          duration: 0.9,
+          smoothWheel: true,
+        }
+      });
+    }, 100);
 
     // GSAP Entrance Timeline
     const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.8 } });
@@ -27,7 +35,10 @@ export const LandingPage = ({ navigate }) => {
       .fromTo('.browser-frame', { y: 60, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.5');
 
     return () => {
-      scroll.destroy();
+      clearTimeout(scrollTimer);
+      if (scroll) {
+        scroll.destroy();
+      }
       // Restore hidden overflow for flow canvas editor
       document.body.style.overflow = 'hidden';
     };
