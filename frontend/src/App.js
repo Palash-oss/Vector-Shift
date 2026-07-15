@@ -16,6 +16,7 @@ import {
   Rocket,
   TestTube,
   Play,
+  Github,
   CheckCircle2,
   Plus,
   Trash2,
@@ -26,7 +27,8 @@ import {
   GitBranch,
   Server,
   RefreshCw,
-  Clock
+  Clock,
+  ArrowLeft
 } from 'lucide-react';
 
 // Foolproof inline SVG for Github to prevent version/import mismatches
@@ -68,6 +70,7 @@ export default function App() {
   const updateNodeField = useStore((state) => state.updateNodeField);
   const activeNodeId = useStore((state) => state.activeNodeId);
   const setActiveNodeId = useStore((state) => state.setActiveNodeId);
+  const setWorkflow = useStore((state) => state.setWorkflow);
 
   // Modals state
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -134,6 +137,41 @@ export default function App() {
   const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
   const [anthropicKey, setAnthropicKey] = useState('sk-ant-••••••••••••••••••••');
 
+  // --- FLOWS DASHBOARD STATE ---
+  const [flows, setFlows] = useState(() => {
+    const saved = localStorage.getItem('pipeline_studio_flows');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {}
+    }
+    // Seed initial flow
+    return [
+      {
+        id: 'flow-1',
+        name: 'Customer Support Bot',
+        nodeCount: 3,
+        lastEdited: '3d ago',
+        nodes: [
+          { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Input Trigger' } },
+          { id: 'llm-1', type: 'llm', position: { x: 250, y: 230 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'LLM Reasoner' } },
+          { id: 'customOutput-1', type: 'customOutput', position: { x: 250, y: 410 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'Output Responder' } }
+        ],
+        edges: [
+          { id: 'edge-customInput-1-llm-1', source: 'customInput-1', target: 'llm-1', type: 'smoothstep', animated: true },
+          { id: 'edge-llm-1-customOutput-1', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+        ]
+      }
+    ];
+  });
+  
+  const [activeFlowId, setActiveFlowId] = useState(() => {
+    const saved = localStorage.getItem('pipeline_studio_active_flow_id');
+    return saved || 'flow-1';
+  });
+
+  const [editorMode, setEditorMode] = useState('dashboard'); // 'dashboard' | 'canvas'
+
   // Handle URL navigation changes
   useEffect(() => {
     const handleLocationChange = () => {
@@ -148,11 +186,34 @@ export default function App() {
     setRoute(path);
   };
 
+  // Sync canvas modifications back to local list and LocalStorage
+  useEffect(() => {
+    if (editorMode !== 'canvas') return;
+    setFlows((prevFlows) => {
+      const updated = prevFlows.map((f) => {
+        if (f.id === activeFlowId) {
+          return {
+            ...f,
+            name: pipelineName,
+            nodeCount: nodes.length,
+            lastEdited: 'Just now',
+            nodes,
+            edges,
+          };
+        }
+        return f;
+      });
+      localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+      return updated;
+    });
+  }, [nodes, edges, pipelineName, activeFlowId, editorMode]);
+
   // Sync Sidebar Navigation Click with Top Switchers
   const handleSidebarItemClick = (itemName) => {
     setActiveSidebarItem(itemName);
     if (itemName === 'Flows') {
       setActiveSubTab('Editor');
+      setEditorMode('dashboard');
     } else if (itemName === 'Logs') {
       setActiveSubTab('Logs');
     }
@@ -171,6 +232,71 @@ export default function App() {
   const addLog = (level, msg) => {
     const time = new Date().toTimeString().split(' ')[0];
     setSystemLogs((prev) => [...prev, { time, level, msg }]);
+  };
+
+  // Flows actions
+  const handleOpenFlow = (flow) => {
+    setActiveFlowId(flow.id);
+    setPipelineName(flow.name);
+    // Load into Zustand store
+    setWorkflow(flow.nodes || [], flow.edges || []);
+    localStorage.setItem('pipeline_studio_active_flow_id', flow.id);
+    setEditorMode('canvas');
+    addLog('info', `Opened workflow pipeline '${flow.name}' in editor.`);
+  };
+
+  const handleCreateNewFlow = () => {
+    const name = prompt("Enter a name for your new workflow pipeline:", "My New Pipeline");
+    if (!name) return;
+    const newId = `flow-${Date.now()}`;
+    const newFlow = {
+      id: newId,
+      name: name,
+      nodeCount: 0,
+      lastEdited: 'Just now',
+      nodes: [],
+      edges: []
+    };
+    const updated = [...flows, newFlow];
+    setFlows(updated);
+    localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+    handleOpenFlow(newFlow);
+    addLog('success', `Created new workflow pipeline '${name}'.`);
+  };
+
+  const handleDeleteFlow = (flowId, e) => {
+    e.stopPropagation();
+    if (flows.length <= 1) {
+      alert("You must keep at least one workflow pipeline in your workspace!");
+      return;
+    }
+    if (!window.confirm("Are you sure you want to delete this workflow?")) {
+      return;
+    }
+    const updated = flows.filter((f) => f.id !== flowId);
+    setFlows(updated);
+    localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+    addLog('info', `Deleted workflow pipeline.`);
+  };
+
+  const handleRenameFlow = (flowId, e) => {
+    e.stopPropagation();
+    const flow = flows.find(f => f.id === flowId);
+    if (!flow) return;
+    const newName = prompt("Rename your workflow pipeline:", flow.name);
+    if (!newName) return;
+    const updated = flows.map((f) => {
+      if (f.id === flowId) {
+        return { ...f, name: newName };
+      }
+      return f;
+    });
+    setFlows(updated);
+    localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+    if (flowId === activeFlowId) {
+      setPipelineName(newName);
+    }
+    addLog('info', `Renamed workflow pipeline to '${newName}'.`);
   };
 
   // 1. Live Backend Deploy Call
@@ -385,7 +511,7 @@ export default function App() {
     alert(`Successfully added '${newNode.data.customTitle}' to the visual canvas! Go to 'Flows' to inspect it.`);
   };
 
-  // Sidebar Items (Embellished with clean vector SVGs instead of emojis)
+  // Sidebar Items
   const sidebarItems = [
     { name: 'Flows', icon: <Workflow size={15} /> },
     { name: 'Prompts', icon: <FileText size={15} /> },
@@ -433,7 +559,7 @@ export default function App() {
     addLog('success', `Inline Prompt updated for node '${nodeId}'.`);
   };
 
-  const isFlowsVisible = activeSidebarItem === 'Flows' && activeSubTab === 'Editor';
+  const isFlowsVisible = activeSidebarItem === 'Flows' && activeSubTab === 'Editor' && editorMode === 'canvas';
 
   return (
     <div className="app-shell">
@@ -445,6 +571,16 @@ export default function App() {
             <span className="logo-text" style={{ fontSize: '1.1rem' }}>Pipeline Studio</span>
           </div>
           <span className="btn-separator"></span>
+          {activeSidebarItem === 'Flows' && editorMode === 'canvas' && (
+            <button
+              className="btn-select-repo"
+              style={{ padding: '6px 12px', fontSize: '0.8rem', marginRight: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              onClick={() => setEditorMode('dashboard')}
+            >
+              <ArrowLeft size={12} />
+              Back to Dashboard
+            </button>
+          )}
           <select className="switcher-dropdown" defaultValue="workspace">
             <option value="workspace">My Workspace</option>
             <option value="prod">Production Org</option>
@@ -459,6 +595,7 @@ export default function App() {
               value={pipelineName}
               onChange={(e) => setPipelineName(e.target.value)}
               title="Click to rename pipeline"
+              disabled={editorMode === 'dashboard'}
             />
             <span className="last-saved-time">Active</span>
             <button className="overflow-menu-btn">•••</button>
@@ -553,6 +690,57 @@ export default function App() {
 
         {/* Content Area */}
         <main className="main-content-container">
+          {/* FLOWS LIST DASHBOARD VIEW */}
+          {activeSidebarItem === 'Flows' && editorMode === 'dashboard' && (
+            <div className="view-panel">
+              <div className="view-title-row">
+                <div>
+                  <h2 className="view-heading">Workflow Pipelines</h2>
+                  <p className="view-desc">Create, manage, and design custom topological LLM routing pipelines.</p>
+                </div>
+                <button className="btn-primary" style={{ width: 'auto', padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleCreateNewFlow}>
+                  <Plus size={14} />
+                  Create New Flow
+                </button>
+              </div>
+
+              <div className="flows-grid-dashboard">
+                {flows.map((flow) => (
+                  <div
+                    key={flow.id}
+                    className="flow-dashboard-card"
+                    onClick={() => handleOpenFlow(flow)}
+                  >
+                    <div className="flow-card-header">
+                      <div className="flow-card-icon-box">
+                        <Workflow size={20} style={{ color: '#58a6ff' }} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button className="flow-card-action-btn" title="Rename Flow" onClick={(e) => handleRenameFlow(flow.id, e)}>
+                          <Edit3 size={12} />
+                        </button>
+                        <button className="flow-card-action-btn delete" title="Delete Flow" onClick={(e) => handleDeleteFlow(flow.id, e)}>
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <h3 className="flow-card-title">{flow.name}</h3>
+                    <p className="flow-card-meta">
+                      <span>{flow.nodes?.length || 0} nodes</span>
+                      <span className="dot-divider"></span>
+                      <span>Edited {flow.lastEdited}</span>
+                    </p>
+                    
+                    <button className="flow-card-open-btn">
+                      Open in Editor
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* FLOWS EDITOR VIEW */}
           {isFlowsVisible && (
             <>

@@ -181,4 +181,8 @@ export const useStore = create((set, get) => ({
         activeNodeId: newNodeId,
       });
     },
+
+    setWorkflow: (nodes, edges) => {
+      set({ nodes, edges });
+    },
 }));
