@@ -1,8 +1,35 @@
 import React, { useState, useEffect } from 'react';
+import { gsap } from 'gsap';
+import LocomotiveScroll from 'locomotive-scroll';
+import 'locomotive-scroll/dist/locomotive-scroll.css';
 
 export const LandingPage = ({ navigate }) => {
   const [activeTab, setActiveTab] = useState('build');
   const [promptInput, setPromptInput] = useState('');
+
+  // 1. Initialize GSAP & Locomotive Scroll
+  useEffect(() => {
+    // Initialize Locomotive Scroll for the landing page container
+    const scroll = new LocomotiveScroll({
+      el: document.querySelector('.landing-wrapper'),
+      smooth: true,
+    });
+
+    // GSAP Entrance Timeline
+    const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.8 } });
+    
+    tl.fromTo('.landing-nav', { y: -60, opacity: 0 }, { y: 0, opacity: 1 })
+      .fromTo('.pill-badge', { y: 30, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.4')
+      .fromTo('.hero-title', { y: 40, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.5')
+      .fromTo('.hero-subtitle', { y: 30, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.5')
+      .fromTo('.hero-input-form', { y: 30, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.5')
+      .fromTo('.suggestion-pill', { scale: 0.9, opacity: 0 }, { scale: 1, opacity: 1, stagger: 0.08 }, '-=0.4')
+      .fromTo('.browser-frame', { y: 60, opacity: 0 }, { y: 0, opacity: 1 }, '-=0.5');
+
+    return () => {
+      scroll.destroy();
+    };
+  }, []);
 
   // Feature content mapping
   const featureContent = {

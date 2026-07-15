@@ -2634,3 +2634,28 @@ body {
   animation: spin 0.8s linear infinite;
   display: inline-block;
 }
+
+/* Custom Minimalist & Semi-Transparent Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Force Premium Inter Font on all input elements */
+input, select, textarea, button {
+  font-family: var(--font-sans) !important;
+}
