@@ -5,6 +5,7 @@ from typing import List, Dict, Any, Optional
 import json
 import os
 import subprocess
+import urllib.request
 
 app = FastAPI()
 
@@ -57,6 +58,7 @@ class GithubPushPayload(BaseModel):
 
 class RunPayload(BaseModel):
     inputs: Dict[str, Any]
+    api_keys: Optional[Dict[str, str]] = None
 
 def detect_cycle(nodes: List[NodeModel], edges: List[EdgeModel]) -> bool:
     # Build graph adjacency list
@@ -93,6 +95,69 @@ def detect_cycle(nodes: List[NodeModel], edges: List[EdgeModel]) -> bool:
                 return True  # Has cycle
 
     return False  # No cycle
+
+def call_real_openai(api_key: str, model: str, system_prompt: str, user_prompt: str) -> str:
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    
+    openai_model = "gpt-4o-mini"
+    if "gpt-4o" in model and "mini" not in model:
+        openai_model = "gpt-4o"
+        
+    messages = []
+    if system_prompt:
+        messages.append({"role": "system", "content": system_prompt})
+    messages.append({"role": "user", "content": user_prompt})
+    
+    body = {
+        "model": openai_model,
+        "messages": messages,
+        "temperature": 0.7
+    }
+    
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            return res_data["choices"][0]["message"]["content"]
+    except Exception as e:
+        return f"❌ OpenAI API Error: {str(e)}"
+
+def call_real_anthropic(api_key: str, model: str, system_prompt: str, user_prompt: str) -> str:
+    url = "https://api.anthropic.com/v1/messages"
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01"
+    }
+    body = {
+        "model": "claude-3-5-sonnet-20240620",
+        "max_tokens": 1024,
+        "messages": [{"role": "user", "content": user_prompt}]
+    }
+    if system_prompt:
+        body["system"] = system_prompt
+        
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers=headers,
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=12) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            return res_data["content"][0]["text"]
+    except Exception as e:
+        return f"❌ Anthropic API Error: {str(e)}"
 
 @app.get('/')
 def read_root():
@@ -170,6 +235,14 @@ def run_pipeline(payload: RunPayload):
         outputs = {}
         execution_logs = []
         
+        # Extract API Keys if present
+        api_keys = payload.api_keys or {}
+        openai_key = api_keys.get("openai", "")
+        anthropic_key = api_keys.get("anthropic", "")
+        
+        is_real_openai = openai_key and not openai_key.startswith("sk-proj-•••") and len(openai_key) > 10
+        is_real_anthropic = anthropic_key and not anthropic_key.startswith("sk-ant-•••") and len(anthropic_key) > 10
+
         # Parse edge routing mapping
         incoming_edges = {n_id: [] for n_id in nodes}
         for edge in edges:
@@ -219,17 +292,37 @@ def run_pipeline(payload: RunPayload):
                     
                 elif n_type in ["llm", "llmNode"]:
                     prompt_blocks = n_data.get("promptBlocks", [])
-                    combined_prompt = " | ".join([p.get("text", "") for p in prompt_blocks])
+                    
+                    # Extract system vs user prompt
+                    system_prompt = ""
+                    user_prompt = ""
+                    for p in prompt_blocks:
+                        role = p.get("role", "User")
+                        text_content = p.get("text", "")
+                        if role == "System":
+                            system_prompt = text_content
+                        else:
+                            user_prompt = text_content
+                            
                     parent_str = ", ".join([str(v) for v in parent_values.values()])
                     
-                    resolved_prompt = combined_prompt
+                    resolved_prompt = user_prompt or "Default instructions"
                     for p_id, p_val in parent_values.items():
                         resolved_prompt = resolved_prompt.replace("{{input}}", str(p_val))
                         resolved_prompt = resolved_prompt.replace("{{payload}}", str(p_val))
                         
                     model_name = n_data.get("model", "gpt-4o-mini")
-                    node_values[n_id] = f"🤖 [LLM Response via {model_name}]: Analyzed data ({parent_str or 'None'}). Compiled prompt: '{resolved_prompt or 'Default prompt instructions'}'. Output generated."
-                    execution_logs.append(f"LLM Node [{n_id}]: executed mock request using '{model_name}'")
+                    
+                    # Check if we should execute a real API call
+                    if is_real_openai and ("gpt" in model_name):
+                        execution_logs.append(f"LLM Node [{n_id}]: querying real OpenAI completion...")
+                        node_values[n_id] = call_real_openai(openai_key, model_name, system_prompt, resolved_prompt)
+                    elif is_real_anthropic and ("claude" in model_name):
+                        execution_logs.append(f"LLM Node [{n_id}]: querying real Anthropic Claude completion...")
+                        node_values[n_id] = call_real_anthropic(anthropic_key, model_name, system_prompt, resolved_prompt)
+                    else:
+                        node_values[n_id] = f"🤖 [LLM Response via {model_name} (Mock)]: Analyzed data ({parent_str or 'None'}). Compiled prompt: '{resolved_prompt or 'Default prompt instructions'}'. Output generated."
+                        execution_logs.append(f"LLM Node [{n_id}]: executed mock request using '{model_name}'")
                     
                 elif n_type in ["customOutput", "output"]:
                     val = next(iter(parent_values.values())) if parent_values else "No Input Connected"

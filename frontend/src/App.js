@@ -212,7 +212,6 @@ export default function App() {
     { name: 'Logs', icon: '📋' },
     { name: 'Deployments', icon: '🚀' },
     { name: 'Tests', icon: '🧪' },
-    { name: 'Jobs', icon: '⚙️' },
     { name: 'Reports', icon: '📈' },
     { name: 'API Playground', icon: '🎮' },
     { name: 'Settings', icon: '🛠️' },
@@ -788,8 +787,8 @@ export default function App() {
             </div>
           )}
 
-          {/* DATA / TESTS / JOBS fallback views (working content lists) */}
-          {['Data', 'Tests', 'Jobs'].includes(activeSidebarItem) && (
+          {/* DATA & TESTS fallback views (working content lists) */}
+          {['Data', 'Tests'].includes(activeSidebarItem) && (
             <div className="view-panel">
               <div className="view-title-row">
                 <div>
@@ -811,12 +810,6 @@ export default function App() {
                     <ul>
                       <li>🧪 <strong>validation_test_suite_1</strong> - <span style={{ color: '#56d364' }}>Passed</span> (0 cycles, 3 edges verified)</li>
                       <li>🧪 <strong>llm_response_schema_check</strong> - <span style={{ color: '#56d364' }}>Passed</span> (JSON schema compliance)</li>
-                    </ul>
-                  )}
-                  {activeSidebarItem === 'Jobs' && (
-                    <ul>
-                      <li>⚙️ <strong>pipeline_observability_sync</strong> - Running (Every 5 mins)</li>
-                      <li>⚙️ <strong>github_git_push_watchdog</strong> - Idle (Listening on commit)</li>
                     </ul>
                   )}
                 </div>
