@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Clock,
   ArrowLeft,
-  X
+  X,
+  Sliders
 } from 'lucide-react';
 
 // Foolproof inline SVG for Github to prevent version/import mismatches
@@ -304,6 +305,26 @@ export default function App() {
       initialEdges = [
         { id: 'edge-1', source: 'customInput-1', target: 'api-1', type: 'smoothstep', animated: true },
         { id: 'edge-2', source: 'api-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+      ];
+    } else if (createFlowTemplate === 'customized') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 100, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Dataset Input' } },
+        { id: 'api-1', type: 'api', position: { x: 100, y: 220 }, data: { id: 'api-1', nodeType: 'api', customTitle: 'External API Fetch' } },
+        { id: 'math-1', type: 'math', position: { x: 350, y: 150 }, data: { id: 'math-1', nodeType: 'math', customTitle: 'Log Math Node' } },
+        { id: 'conditional-1', type: 'conditional', position: { x: 250, y: 380 }, data: { id: 'conditional-1', nodeType: 'conditional', customTitle: 'Logic Classifier' } },
+        { id: 'timer-1', type: 'timer', position: { x: 100, y: 540 }, data: { id: 'timer-1', nodeType: 'timer', customTitle: '500ms Delay' } },
+        { id: 'llm-1', type: 'llm', position: { x: 400, y: 520 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'GPT-4o Reasoning' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 250, y: 720 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'Final Output' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'api-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'customInput-1', target: 'math-1', type: 'smoothstep', animated: true },
+        { id: 'edge-3', source: 'api-1', target: 'conditional-1', type: 'smoothstep', animated: true },
+        { id: 'edge-4', source: 'math-1', target: 'conditional-1', type: 'smoothstep', animated: true },
+        { id: 'edge-5', source: 'conditional-1', target: 'timer-1', type: 'smoothstep', animated: true },
+        { id: 'edge-6', source: 'conditional-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-7', source: 'timer-1', target: 'customOutput-1', type: 'smoothstep', animated: true },
+        { id: 'edge-8', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
       ];
     }
 
@@ -1433,7 +1454,8 @@ export default function App() {
                     { id: 'blank', title: 'Blank Canvas', desc: 'Start with an empty flow canvas.', icon: <Workflow size={14} /> },
                     { id: 'llm', title: 'LLM Reasoner', desc: 'Input -> Prompt -> LLM -> Output.', icon: <Rocket size={14} /> },
                     { id: 'conditional', title: 'Conditional Router', desc: 'Topological branch query routing.', icon: <GitBranch size={14} /> },
-                    { id: 'api', title: 'Webhook API', desc: 'Webhook event trigger webhook.', icon: <Server size={14} /> }
+                    { id: 'api', title: 'Webhook API', desc: 'Webhook event trigger webhook.', icon: <Server size={14} /> },
+                    { id: 'customized', title: 'Customized Flow', desc: 'Complex flow with APIs, math, routers & timers.', icon: <Sliders size={14} /> }
                   ].map((t) => (
                     <button
                       key={t.id}
