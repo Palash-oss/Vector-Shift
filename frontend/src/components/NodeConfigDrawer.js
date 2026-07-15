@@ -6,7 +6,6 @@ export const NodeConfigDrawer = ({ nodeId, onClose }) => {
   const nodes = useStore((state) => state.nodes);
   const updateNodeField = useStore((state) => state.updateNodeField);
   const setNodeStatus = useStore((state) => state.setNodeStatus);
-  const nodeStatuses = useStore((state) => state.nodeStatuses);
 
   // Find target node
   const node = nodes.find((n) => n.id === nodeId);

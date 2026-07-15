@@ -9,11 +9,11 @@ export const LandingPage = ({ navigate }) => {
 
   // 1. Initialize GSAP & Locomotive Scroll
   useEffect(() => {
-    // Initialize Locomotive Scroll for the landing page container
-    const scroll = new LocomotiveScroll({
-      el: document.querySelector('.landing-wrapper'),
-      smooth: true,
-    });
+    // Enable body scroll for landing page
+    document.body.style.overflow = 'auto';
+
+    // Initialize Locomotive Scroll v5 (global window viewport)
+    const scroll = new LocomotiveScroll();
 
     // GSAP Entrance Timeline
     const tl = gsap.timeline({ defaults: { ease: 'power3.out', duration: 0.8 } });
@@ -28,6 +28,8 @@ export const LandingPage = ({ navigate }) => {
 
     return () => {
       scroll.destroy();
+      // Restore hidden overflow for flow canvas editor
+      document.body.style.overflow = 'hidden';
     };
   }, []);
 

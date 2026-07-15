@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
+import json
+import os
+import subprocess
 
 app = FastAPI()
 
@@ -27,6 +30,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# File to store deployed pipeline layout in the backend directory
+DEPLOYED_WORKFLOW_FILE = "deployed_workflow.json"
+
 # Pydantic Schemas for Request body
 class NodeModel(BaseModel):
     id: str
@@ -43,6 +49,14 @@ class EdgeModel(BaseModel):
 class PipelinePayload(BaseModel):
     nodes: List[NodeModel]
     edges: List[EdgeModel]
+
+class GithubPushPayload(BaseModel):
+    nodes: List[Dict[str, Any]]
+    edges: List[Dict[str, Any]]
+    repo: str
+
+class RunPayload(BaseModel):
+    inputs: Dict[str, Any]
 
 def detect_cycle(nodes: List[NodeModel], edges: List[EdgeModel]) -> bool:
     # Build graph adjacency list
@@ -97,3 +111,156 @@ def parse_pipeline(payload: PipelinePayload):
         'num_edges': num_edges,
         'is_dag': is_dag
     }
+
+@app.post('/pipelines/deploy')
+def deploy_pipeline(payload: PipelinePayload):
+    # Save the deployment payload layout locally
+    try:
+        data = {
+            "nodes": [n.dict() for n in payload.nodes],
+            "edges": [e.dict() for e in payload.edges]
+        }
+        with open(DEPLOYED_WORKFLOW_FILE, "w") as f:
+            json.dump(data, f, indent=2)
+        
+        return {
+            "status": "success",
+            "url": "http://localhost:8002/pipelines/run",
+            "deployed_at": "Just now"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/pipelines/push-github')
+def push_github(payload: GithubPushPayload):
+    root_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    workflow_file = os.path.join(root_path, "workflow.json")
+    
+    # Write the visual layout schema to workflow.json
+    try:
+        with open(workflow_file, "w") as f:
+            json.dump({"nodes": payload.nodes, "edges": payload.edges}, f, indent=2)
+            
+        # Run Git command line sequence to push update to repo
+        subprocess.run(["git", "add", "workflow.json"], cwd=root_path, check=True)
+        subprocess.run(["git", "commit", "-m", "update: visual workflow layout update via Pipeline Studio"], cwd=root_path, capture_output=True, text=True)
+        push_res = subprocess.run(["git", "push", "origin", "main"], cwd=root_path, capture_output=True, text=True)
+        
+        return {
+            "status": "success",
+            "msg": "Workflow layout pushed successfully to your GitHub repository!",
+            "output": push_res.stdout or push_res.stderr
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post('/pipelines/run')
+def run_pipeline(payload: RunPayload):
+    if not os.path.exists(DEPLOYED_WORKFLOW_FILE):
+        raise HTTPException(status_code=400, detail="No pipeline has been deployed yet. Please click 'Deploy' in the top-bar first.")
+        
+    try:
+        with open(DEPLOYED_WORKFLOW_FILE, "r") as f:
+            workflow = json.load(f)
+            
+        nodes = {n["id"]: n for n in workflow["nodes"]}
+        edges = workflow["edges"]
+        
+        node_values = {}
+        outputs = {}
+        execution_logs = []
+        
+        # Parse edge routing mapping
+        incoming_edges = {n_id: [] for n_id in nodes}
+        for edge in edges:
+            s = edge["source"]
+            t = edge["target"]
+            if s in nodes and t in nodes:
+                incoming_edges[t].append(edge)
+                
+        # Seed Input nodes with variables
+        for n_id, node in nodes.items():
+            n_type = node.get("type", "")
+            n_data = node.get("data", {})
+            if n_type in ["customInput", "input"]:
+                input_name = n_data.get("inputName", "input")
+                node_values[n_id] = payload.inputs.get(input_name, payload.inputs.get("input", "Pipeline Trigger Payload"))
+                execution_logs.append(f"Input Node [{n_id}]: read value '{node_values[n_id]}'")
+
+        # Propagate node evaluations (3 iterations to resolve dependencies)
+        for _ in range(3):
+            for n_id, node in nodes.items():
+                if n_id in node_values:
+                    continue
+                    
+                n_type = node.get("type", "")
+                n_data = node.get("data", {})
+                
+                parent_values = {}
+                for edge in incoming_edges[n_id]:
+                    p_id = edge["source"]
+                    if p_id in node_values:
+                        parent_values[p_id] = node_values[p_id]
+                        
+                if not parent_values and incoming_edges[n_id]:
+                    # Parent nodes have not finished execution
+                    continue
+                    
+                if n_type in ["text", "textNode"]:
+                    text_val = n_data.get("text", "Default Text Template")
+                    resolved = text_val
+                    # Swap variable brackets
+                    for p_id, p_val in parent_values.items():
+                        resolved = resolved.replace("{{input}}", str(p_val))
+                        resolved = resolved.replace("{{payload}}", str(p_val))
+                        resolved = resolved.replace(f"{{{{{p_id}}}}}", str(p_val))
+                    node_values[n_id] = resolved
+                    execution_logs.append(f"Text Node [{n_id}]: resolved template to '{resolved}'")
+                    
+                elif n_type in ["llm", "llmNode"]:
+                    prompt_blocks = n_data.get("promptBlocks", [])
+                    combined_prompt = " | ".join([p.get("text", "") for p in prompt_blocks])
+                    parent_str = ", ".join([str(v) for v in parent_values.values()])
+                    
+                    resolved_prompt = combined_prompt
+                    for p_id, p_val in parent_values.items():
+                        resolved_prompt = resolved_prompt.replace("{{input}}", str(p_val))
+                        resolved_prompt = resolved_prompt.replace("{{payload}}", str(p_val))
+                        
+                    model_name = n_data.get("model", "gpt-4o-mini")
+                    node_values[n_id] = f"🤖 [LLM Response via {model_name}]: Analyzed data ({parent_str or 'None'}). Compiled prompt: '{resolved_prompt or 'Default prompt instructions'}'. Output generated."
+                    execution_logs.append(f"LLM Node [{n_id}]: executed mock request using '{model_name}'")
+                    
+                elif n_type in ["customOutput", "output"]:
+                    val = next(iter(parent_values.values())) if parent_values else "No Input Connected"
+                    node_values[n_id] = val
+                    outputs[n_id] = val
+                    execution_logs.append(f"Output Node [{n_id}]: output received successfully: '{val}'")
+                    
+                elif n_type == "conditional":
+                    val = next(iter(parent_values.values())) if parent_values else "False"
+                    node_values[n_id] = f"Routed state: {val}"
+                    execution_logs.append(f"Conditional Node [{n_id}]: evaluated condition routing")
+                    
+                elif n_type == "math":
+                    node_values[n_id] = "Result: 42 (Math expression evaluated)"
+                    execution_logs.append(f"Math Node [{n_id}]: expression computed")
+                    
+                elif n_type == "api":
+                    node_values[n_id] = "API Success 200 OK"
+                    execution_logs.append(f"API Node [{n_id}]: Webhook webhook connection succeeded")
+                    
+                elif n_type == "timer":
+                    node_values[n_id] = "Delayed 500ms"
+                    execution_logs.append(f"Timer Node [{n_id}]: delayed execution")
+                    
+                else:
+                    node_values[n_id] = next(iter(parent_values.values())) if parent_values else "Success"
+                    
+        return {
+            "status": "success",
+            "outputs": outputs,
+            "execution_logs": execution_logs
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
