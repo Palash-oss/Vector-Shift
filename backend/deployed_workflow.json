@@ -1,0 +1,58 @@
+{
+  "nodes": [
+    {
+      "id": "customInput-1",
+      "type": "customInput",
+      "data": {
+        "id": "customInput-1",
+        "nodeType": "customInput",
+        "customTitle": "Input Trigger",
+        "inputName": "input_1",
+        "inputType": "Text"
+      }
+    },
+    {
+      "id": "llm-1",
+      "type": "llm",
+      "data": {
+        "id": "llm-1",
+        "nodeType": "llm",
+        "customTitle": "LLM Reasoner"
+      }
+    },
+    {
+      "id": "customOutput-1",
+      "type": "customOutput",
+      "data": {
+        "id": "customOutput-1",
+        "nodeType": "customOutput",
+        "customTitle": "Output Responder",
+        "outputName": "output_1",
+        "outputType": "Text"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge-customInput-1-llm-1",
+      "source": "customInput-1",
+      "target": "llm-1",
+      "sourceHandle": null,
+      "targetHandle": null
+    },
+    {
+      "id": "edge-llm-1-customOutput-1",
+      "source": "llm-1",
+      "target": "customOutput-1",
+      "sourceHandle": null,
+      "targetHandle": null
+    },
+    {
+      "id": "edge-loopback",
+      "source": "customOutput-1",
+      "target": "customInput-1",
+      "sourceHandle": null,
+      "targetHandle": null
+    }
+  ]
+}

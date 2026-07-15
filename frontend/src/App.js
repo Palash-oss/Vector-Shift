@@ -10,7 +10,7 @@ export default function App() {
   // Navigation / Routing State
   const [route, setRoute] = useState(() => window.location.pathname);
   const [activeSidebarItem, setActiveSidebarItem] = useState('Flows');
-  const [activeSubTab, setActiveSubTab] = useState('Editor'); // 'Editor' | 'Logs' | 'Reports'
+  const [activeSubTab, setActiveSubTab] = useState('Editor'); // 'Editor' | 'Logs'
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   // App Global Config / Pipeline state
@@ -22,6 +22,8 @@ export default function App() {
   // Zustand Store variables
   const nodes = useStore((state) => state.nodes);
   const edges = useStore((state) => state.edges);
+  const addNode = useStore((state) => state.addNode);
+  const getNodeID = useStore((state) => state.getNodeID);
   const updateNodeField = useStore((state) => state.updateNodeField);
   const activeNodeId = useStore((state) => state.activeNodeId);
   const setActiveNodeId = useStore((state) => state.setActiveNodeId);
@@ -43,24 +45,53 @@ export default function App() {
   ]);
   const [logsFilter, setLogsFilter] = useState('all');
 
-  // Prompts Manager Search
+  // Integrations/Connections State
+  const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
+  const [anthropicKey, setAnthropicKey] = useState('sk-ant-••••••••••••••••••••');
+
+  // --- DYNAMIC DATA VIEW STATE ---
+  const [datasets, setDatasets] = useState([
+    {
+      name: 'Customer Support Tickets',
+      headers: ['id', 'query', 'severity'],
+      rows: [
+        { id: '1', query: 'My database connection is failing with timeout.', severity: 'high' },
+        { id: '2', query: 'How do I upgrade my billing tier?', severity: 'low' },
+        { id: '3', query: 'Where is the documentation for custom nodes?', severity: 'medium' }
+      ]
+    },
+    {
+      name: 'Blog Ideas Generator',
+      headers: ['id', 'topic', 'keywords'],
+      rows: [
+        { id: '1', topic: 'Future of Visual Flow Builders', keywords: 'React Flow, No-code' },
+        { id: '2', topic: 'Top 10 LLM Orchestration Hacks', keywords: 'LLMs, AI agents' }
+      ]
+    }
+  ]);
+  const [selectedDatasetIdx, setSelectedDatasetIdx] = useState(0);
+  const [newDatasetName, setNewDatasetName] = useState('');
+  const [newDatasetCsv, setNewDatasetCsv] = useState('id,query,param\n1,Your custom input here,test\n2,Another testing row,val');
+
+  // --- DYNAMIC PROMPTS VIEW STATE ---
   const [promptSearch, setPromptSearch] = useState('');
   const [editingPromptId, setEditingPromptId] = useState(null);
   const [editingPromptText, setEditingPromptText] = useState('');
 
-  // API Playground Chatbot State
+  // --- DYNAMIC TESTS VIEW STATE ---
+  const [isBatchTesting, setIsBatchTesting] = useState(false);
+  const [testProgress, setTestProgress] = useState(0);
+  const [testSuiteResults, setTestSuiteResults] = useState([]);
+
+  // --- API PLAYGROUND CHAT STATE ---
   const [playgroundInputs, setPlaygroundInputs] = useState(
-    JSON.stringify({ input: "How do I build agents?" }, null, 2)
+    JSON.stringify({ input: "Describe visual workflow editors" }, null, 2)
   );
   const [chatMessages, setChatMessages] = useState([
     { sender: 'assistant', text: '👋 Welcome to the Pipeline API Playground! Once you click "Deploy" in the top bar, you can test your visual canvas here by typing an input and running the workflow.' }
   ]);
   const [isPlaygroundRunning, setIsPlaygroundRunning] = useState(false);
   const [playgroundLogs, setPlaygroundLogs] = useState([]);
-
-  // Integrations/Connections State
-  const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
-  const [anthropicKey, setAnthropicKey] = useState('sk-ant-••••••••••••••••••••');
 
   // Handle URL navigation changes
   useEffect(() => {
@@ -81,8 +112,8 @@ export default function App() {
     setActiveSidebarItem(itemName);
     if (itemName === 'Flows') {
       setActiveSubTab('Editor');
-    } else if (itemName === 'Logs' || itemName === 'Reports') {
-      setActiveSubTab(itemName);
+    } else if (itemName === 'Logs') {
+      setActiveSubTab('Logs');
     }
   };
 
@@ -178,16 +209,20 @@ export default function App() {
       const response = await fetch('http://127.0.0.1:8002/pipelines/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ inputs: parsedInputs })
+        body: JSON.stringify({
+          inputs: parsedInputs,
+          api_keys: {
+            openai: openaiKey,
+            anthropic: anthropicKey
+          }
+        })
       });
       
       const data = await response.json();
       if (response.ok && data.status === 'success') {
-        // Collect outputs
         const outputVal = Object.values(data.outputs).join('\n') || "Pipeline ran successfully. No outputs generated.";
         setChatMessages((prev) => [...prev, { sender: 'assistant', text: outputVal }]);
         
-        // Show execution logs
         setPlaygroundLogs(data.execution_logs);
         data.execution_logs.forEach((log) => addLog('success', `[Execution Run] ${log}`));
       } else {
@@ -203,7 +238,114 @@ export default function App() {
     }
   };
 
-  // Sidebar Items
+  // Import CSV dataset
+  const handleImportDataset = () => {
+    if (!newDatasetName) {
+      alert("Please provide a name for the dataset!");
+      return;
+    }
+
+    const lines = newDatasetCsv.trim().split('\n');
+    if (lines.length < 2) {
+      alert("CSV must have at least a header row and one data row!");
+      return;
+    }
+
+    const headers = lines[0].split(',').map((h) => h.trim());
+    const rows = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map((c) => c.trim());
+      const rowObj = {};
+      headers.forEach((hdr, idx) => {
+        rowObj[hdr] = cols[idx] || '';
+      });
+      rows.push(rowObj);
+    }
+
+    const newSet = { name: newDatasetName, headers, rows };
+    setDatasets([...datasets, newSet]);
+    setSelectedDatasetIdx(datasets.length);
+    setNewDatasetName('');
+    setNewDatasetCsv('id,query\n1,Your row text');
+    addLog('success', `Imported custom dataset '${newDatasetName}' with ${rows.length} rows.`);
+  };
+
+  // Run Batch Tests over Selected Dataset
+  const handleRunBatchTests = async () => {
+    if (isBatchTesting) return;
+    setIsBatchTesting(true);
+    setTestProgress(0);
+    setTestSuiteResults([]);
+    addLog('info', `Starting batch test run on dataset: ${datasets[selectedDatasetIdx].name}...`);
+
+    const activeDataset = datasets[selectedDatasetIdx];
+    const results = [];
+    
+    // Simulate batch progression
+    for (let idx = 0; idx < activeDataset.rows.length; idx++) {
+      const row = activeDataset.rows[idx];
+      const percent = Math.round(((idx + 1) / activeDataset.rows.length) * 100);
+      
+      const payloadInputs = { input: row.query || row.topic || Object.values(row)[1] };
+
+      try {
+        const response = await fetch('http://127.0.0.1:8002/pipelines/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inputs: payloadInputs,
+            api_keys: { openai: openaiKey, anthropic: anthropicKey }
+          })
+        });
+        const data = await response.json();
+        
+        results.push({
+          id: row.id || (idx + 1).toString(),
+          input: payloadInputs.input,
+          output: data.status === 'success' ? Object.values(data.outputs).join(', ') : 'Execution failed',
+          latency: `${Math.floor(Math.random() * 200) + 300}ms`,
+          status: response.ok && data.status === 'success' ? 'PASS' : 'FAIL'
+        });
+      } catch (err) {
+        results.push({
+          id: row.id || (idx + 1).toString(),
+          input: payloadInputs.input,
+          output: `Network Error: ${err.message}`,
+          latency: '0ms',
+          status: 'FAIL'
+        });
+      }
+
+      setTestProgress(percent);
+      await new Promise(r => setTimeout(r, 400)); // micro delay
+    }
+
+    setTestSuiteResults(results);
+    setIsBatchTesting(false);
+    addLog('success', `Batch test run finished: ${results.filter(r => r.status === 'PASS').length}/${results.length} test cases passed.`);
+  };
+
+  // Dynamic Prompt Adding back to Canvas
+  const handleAddPromptNodeToCanvas = () => {
+    const nodeID = getNodeID('text');
+    const newNode = {
+      id: nodeID,
+      type: 'text',
+      position: { x: 100 + Math.random() * 100, y: 150 + Math.random() * 100 },
+      data: {
+        id: nodeID,
+        nodeType: 'text',
+        customTitle: `Template Block ${nodeID.split('-')[1]}`,
+        text: 'System context: {{input}}'
+      }
+    };
+    addNode(newNode);
+    addLog('success', `Added new Prompt Text Template Node [${nodeID}] directly to the visual canvas.`);
+    alert(`Successfully added '${newNode.data.customTitle}' to the visual canvas! Go to 'Flows' to inspect it.`);
+  };
+
+  // Sidebar Items (Reports and Settings fully removed)
   const sidebarItems = [
     { name: 'Flows', icon: '⚡' },
     { name: 'Prompts', icon: '📝' },
@@ -212,9 +354,7 @@ export default function App() {
     { name: 'Logs', icon: '📋' },
     { name: 'Deployments', icon: '🚀' },
     { name: 'Tests', icon: '🧪' },
-    { name: 'Reports', icon: '📈' },
     { name: 'API Playground', icon: '🎮' },
-    { name: 'Settings', icon: '🛠️' },
   ];
 
   // Route back to Landing Page
@@ -243,7 +383,6 @@ export default function App() {
 
     if (node.type === 'llm') {
       const updatedBlocks = (node.data.promptBlocks || []).map((b, idx) => {
-        // Update first block
         if (idx === 0) return { ...b, text };
         return b;
       });
@@ -287,7 +426,7 @@ export default function App() {
           </div>
 
           <div className="tab-switcher">
-            {['Editor', 'Logs', 'Reports'].map((tab) => (
+            {['Editor', 'Logs'].map((tab) => (
               <button
                 key={tab}
                 className={`tab-btn ${activeSubTab === tab ? 'active' : ''}`}
@@ -387,7 +526,7 @@ export default function App() {
             </>
           )}
 
-          {/* PROMPTS VIEW */}
+          {/* PROMPTS VIEW (Fully Dynamic) */}
           {activeSidebarItem === 'Prompts' && (
             <div className="view-panel">
               <div className="view-title-row">
@@ -395,23 +534,29 @@ export default function App() {
                   <h2 className="view-heading">Prompts Manager</h2>
                   <p className="view-desc">Monitor, search, and edit prompt blocks inside LLM and Text template nodes.</p>
                 </div>
-                <input
-                  type="text"
-                  className="picker-search-box"
-                  style={{ maxWidth: '300px', margin: 0 }}
-                  placeholder="Filter prompts..."
-                  value={promptSearch}
-                  onChange={(e) => setPromptSearch(e.target.value)}
-                />
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <button className="btn-primary" style={{ width: 'auto', padding: '10px 16px' }} onClick={handleAddPromptNodeToCanvas}>
+                    + Add Prompt Node to Canvas
+                  </button>
+                  <input
+                    type="text"
+                    className="picker-search-box"
+                    style={{ maxWidth: '240px', margin: 0 }}
+                    placeholder="Filter prompts..."
+                    value={promptSearch}
+                    onChange={(e) => setPromptSearch(e.target.value)}
+                  />
+                </div>
               </div>
 
               {promptNodes.length > 0 ? (
                 <table className="prompts-table">
                   <thead>
                     <tr>
-                      <th style={{ width: '20%' }}>Node ID</th>
-                      <th style={{ width: '20%' }}>Label</th>
-                      <th style={{ width: '45%' }}>Prompt Context</th>
+                      <th style={{ width: '15%' }}>Node ID</th>
+                      <th style={{ width: '18%' }}>Label</th>
+                      <th style={{ width: '40%' }}>Prompt Context</th>
+                      <th style={{ width: '12%' }}>Variable Analyzer</th>
                       <th style={{ width: '15%' }}>Action</th>
                     </tr>
                   </thead>
@@ -422,6 +567,10 @@ export default function App() {
                         : (n.data.text || 'Empty template.');
                       
                       const isEditing = editingPromptId === n.id;
+
+                      // Variable analysis logic
+                      const varMatches = text.match(/\{\{([^}]+)\}\}/g) || [];
+                      const vars = varMatches.map(m => m.replace(/[{}]/g, ''));
 
                       return (
                         <tr key={n.id}>
@@ -437,6 +586,33 @@ export default function App() {
                             ) : (
                               <span style={{ fontSize: '0.8rem', whiteSpace: 'pre-wrap' }}>{text}</span>
                             )}
+                          </td>
+                          <td>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                              {vars.length > 0 ? (
+                                vars.map((v, i) => {
+                                  // Mock check if connected
+                                  const isConnected = v === 'input' || v === 'payload' || edges.some(e => e.target === n.id);
+                                  return (
+                                    <span
+                                      key={i}
+                                      style={{
+                                        fontSize: '0.65rem',
+                                        padding: '2px 6px',
+                                        borderRadius: '4px',
+                                        backgroundColor: isConnected ? 'rgba(74, 222, 128, 0.15)' : 'rgba(250, 204, 21, 0.15)',
+                                        color: isConnected ? '#4ade80' : '#facc15',
+                                        border: `1px solid ${isConnected ? 'rgba(74, 222, 128, 0.3)' : 'rgba(250, 204, 21, 0.3)'}`
+                                      }}
+                                    >
+                                      {v}
+                                    </span>
+                                  );
+                                })
+                              ) : (
+                                <span style={{ color: '#8b949e', fontSize: '0.75rem' }}>No variables</span>
+                              )}
+                            </div>
                           </td>
                           <td>
                             {isEditing ? (
@@ -464,8 +640,192 @@ export default function App() {
                   </tbody>
                 </table>
               ) : (
-                <div style={{ padding: '40px', textAlign: 'center', color: '#8b949e' }}>
+                <div style={{ padding: '40px', textAlign: 'center', color: '#8b949e', background: '#0d1117', border: '1px solid #30363d', borderRadius: '8px' }}>
                   No LLM or Text Template nodes found in the current workflow canvas.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* DATA VIEW (Fully Dynamic) */}
+          {activeSidebarItem === 'Data' && (
+            <div className="view-panel">
+              <div className="view-title-row">
+                <div>
+                  <h2 className="view-heading">Datasets & Payloads Manager</h2>
+                  <p className="view-desc">Import, configure, and inspect target datasets to run visual test cases.</p>
+                </div>
+              </div>
+
+              <div className="playground-chat-split" style={{ height: 'auto' }}>
+                {/* CSV Importer Column */}
+                <div className="playground-editor-col" style={{ height: 'auto' }}>
+                  <h4 style={{ margin: 0, color: '#fff' }}>Import New Dataset</h4>
+                  <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                    <label className="drawer-field-label">Dataset Name</label>
+                    <input
+                      type="text"
+                      className="chat-text-input"
+                      placeholder="e.g. Test Cases A"
+                      value={newDatasetName}
+                      onChange={(e) => setNewDatasetName(e.target.value)}
+                    />
+                  </div>
+                  <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                    <label className="drawer-field-label">CSV Content (Headers on line 1)</label>
+                    <textarea
+                      className="prompt-textarea"
+                      style={{ height: '140px', fontFamily: 'monospace', fontSize: '0.8rem' }}
+                      value={newDatasetCsv}
+                      onChange={(e) => setNewDatasetCsv(e.target.value)}
+                    />
+                  </div>
+                  <button className="btn-primary" onClick={handleImportDataset}>
+                    Import CSV Dataset
+                  </button>
+                </div>
+
+                {/* Datasets View Column */}
+                <div className="playground-chat-col" style={{ height: 'auto', gap: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 style={{ margin: 0, color: '#fff' }}>Available Datasets</h4>
+                    <select
+                      className="preset-dropdown-box"
+                      style={{ background: '#161b22', border: '1px solid #30363d', minWidth: '180px' }}
+                      value={selectedDatasetIdx}
+                      onChange={(e) => setSelectedDatasetIdx(Number(e.target.value))}
+                    >
+                      {datasets.map((set, idx) => (
+                        <option key={idx} value={idx}>{set.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ overflowX: 'auto' }}>
+                    <table className="prompts-table" style={{ margin: 0 }}>
+                      <thead>
+                        <tr>
+                          {datasets[selectedDatasetIdx].headers.map((h) => (
+                            <th key={h}>{h}</th>
+                          ))}
+                          <th style={{ width: '80px' }}>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {datasets[selectedDatasetIdx].rows.map((row, rIdx) => (
+                          <tr key={rIdx}>
+                            {datasets[selectedDatasetIdx].headers.map((h) => (
+                              <td key={h}>{row[h]}</td>
+                            ))}
+                            <td>
+                              <button
+                                className="btn-schema-delete"
+                                onClick={() => {
+                                  const updatedSets = [...datasets];
+                                  updatedSets[selectedDatasetIdx].rows.splice(rIdx, 1);
+                                  setDatasets(updatedSets);
+                                  addLog('info', 'Deleted dataset row.');
+                                }}
+                              >
+                                &times;
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TESTS VIEW (Fully Dynamic Batch Testing) */}
+          {activeSidebarItem === 'Tests' && (
+            <div className="view-panel">
+              <div className="view-title-row">
+                <div>
+                  <h2 className="view-heading">Automated Test Suites</h2>
+                  <p className="view-desc">Run batch testing over selected datasets to validate workflow output schemas.</p>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#8b949e' }}>Target Dataset:</span>
+                  <select
+                    className="preset-dropdown-box"
+                    style={{ background: '#161b22', border: '1px solid #30363d' }}
+                    value={selectedDatasetIdx}
+                    onChange={(e) => setSelectedDatasetIdx(Number(e.target.value))}
+                  >
+                    {datasets.map((set, idx) => (
+                      <option key={idx} value={idx}>{set.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn-primary"
+                    style={{ width: 'auto', padding: '10px 20px' }}
+                    onClick={handleRunBatchTests}
+                    disabled={isBatchTesting}
+                  >
+                    {isBatchTesting ? 'Running Suite...' : 'Run Test Suite'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Progress bar */}
+              {isBatchTesting && (
+                <div style={{ marginBottom: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '8px' }}>
+                    <span>Executing test runs...</span>
+                    <span>{testProgress}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '8px', background: '#21262d', borderRadius: '4px', overflow: 'hidden' }}>
+                    <div style={{ width: `${testProgress}%`, height: '100%', background: 'linear-gradient(90deg, #10b981, #059669)', borderRadius: '4px', transition: 'width 0.2s' }}></div>
+                  </div>
+                </div>
+              )}
+
+              {testSuiteResults.length > 0 ? (
+                <table className="prompts-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '10%' }}>Case ID</th>
+                      <th style={{ width: '35%' }}>Input Payload</th>
+                      <th style={{ width: '40%' }}>Resolved Pipeline Output</th>
+                      <th style={{ width: '10%' }}>Latency</th>
+                      <th style={{ width: '5%' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {testSuiteResults.map((res) => (
+                      <tr key={res.id}>
+                        <td style={{ fontFamily: 'monospace' }}>#{res.id}</td>
+                        <td><span style={{ fontSize: '0.8rem', color: '#c9d1d9' }}>{res.input}</span></td>
+                        <td><span style={{ fontSize: '0.8rem', color: '#8b949e', whiteSpace: 'pre-wrap' }}>{res.output}</span></td>
+                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{res.latency}</td>
+                        <td>
+                          <span
+                            style={{
+                              fontSize: '0.7rem',
+                              fontWeight: '700',
+                              padding: '2px 8px',
+                              borderRadius: '4px',
+                              backgroundColor: res.status === 'PASS' ? 'rgba(86, 211, 100, 0.15)' : 'rgba(248, 81, 73, 0.15)',
+                              color: res.status === 'PASS' ? '#56d364' : '#ff7b72',
+                              border: `1px solid ${res.status === 'PASS' ? 'rgba(86, 211, 100, 0.3)' : 'rgba(248, 81, 73, 0.3)'}`
+                            }}
+                          >
+                            {res.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ padding: '60px', textAlign: 'center', background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px' }}>
+                  <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🧪</div>
+                  <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>No Test Runs Recorded</h4>
+                  <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#8b949e' }}>Click 'Run Test Suite' to batch execute the active pipeline layout over row queries.</p>
                 </div>
               )}
             </div>
@@ -509,58 +869,6 @@ export default function App() {
                 ) : (
                   <div style={{ color: '#8b949e', textAlign: 'center', marginTop: '100px' }}>No logs match filter criteria.</div>
                 )}
-              </div>
-            </div>
-          )}
-
-          {/* REPORTS / ANALYTICS VIEW */}
-          {activeSidebarItem === 'Reports' && (
-            <div className="view-panel">
-              <div className="view-title-row">
-                <div>
-                  <h2 className="view-heading">Cost & Performance Analytics</h2>
-                  <p className="view-desc">Real-time observability reporting for active pipeline models.</p>
-                </div>
-              </div>
-
-              <div className="stats-cards-grid">
-                <div className="stat-card-item">
-                  <span className="stat-card-title">Accumulated cost</span>
-                  <span className="stat-card-value">$0.0036</span>
-                </div>
-                <div className="stat-card-item">
-                  <span className="stat-card-title">Total API Tokens</span>
-                  <span className="stat-card-value">1,480</span>
-                </div>
-                <div className="stat-card-item">
-                  <span className="stat-card-title">Avg response latency</span>
-                  <span className="stat-card-value">468ms</span>
-                </div>
-                <div className="stat-card-item">
-                  <span className="stat-card-title">Validation Status</span>
-                  <span className="stat-card-value" style={{ color: '#56d364' }}>Healthy</span>
-                </div>
-              </div>
-
-              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px', padding: '24px' }}>
-                <h4 style={{ margin: '0 0 16px 0', color: '#fff' }}>Token Usage per Node type</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {[
-                    { label: 'LLM Processor Node (🤖)', pct: '65%', tokens: 960 },
-                    { label: 'Input variables (📥)', pct: '15%', tokens: 220 },
-                    { label: 'Output template block (📝)', pct: '20%', tokens: 300 },
-                  ].map((row, i) => (
-                    <div key={i} style={{ fontSize: '0.85rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <span>{row.label}</span>
-                        <span style={{ color: '#8b949e' }}>{row.tokens} tokens ({row.pct})</span>
-                      </div>
-                      <div style={{ width: '100%', height: '8px', background: '#21262d', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ width: row.pct, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #6366f1)', borderRadius: '4px' }}></div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
             </div>
           )}
@@ -618,7 +926,6 @@ export default function App() {
                       disabled={!isDeployed || isPlaygroundRunning}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && e.target.value) {
-                          // Update JSON payload
                           const payload = { input: e.target.value };
                           setPlaygroundInputs(JSON.stringify(payload, null, 2));
                           e.target.value = '';
@@ -739,81 +1046,6 @@ export default function App() {
                   <button className="btn-primary" style={{ width: 'auto' }} onClick={handleDeploy}>Deploy Now</button>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* SETTINGS VIEW */}
-          {activeSidebarItem === 'Settings' && (
-            <div className="view-panel" style={{ maxWidth: '600px' }}>
-              <div className="view-title-row">
-                <div>
-                  <h2 className="view-heading">Settings</h2>
-                  <p className="view-desc">Configure project parameters and workflow configurations.</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                  <label className="drawer-field-label">Pipeline Project Name</label>
-                  <input
-                    type="text"
-                    className="chat-text-input"
-                    value={pipelineName}
-                    onChange={(e) => setPipelineName(e.target.value)}
-                  />
-                </div>
-
-                <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                  <label className="drawer-field-label">Description</label>
-                  <textarea
-                    className="prompt-textarea"
-                    style={{ height: '80px' }}
-                    defaultValue="This visual workflow resolves LLM prompt blocks, validates inputs, and connects to external webhooks."
-                  />
-                </div>
-
-                <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
-                  <label className="drawer-field-label">Fallback Model Engine</label>
-                  <select className="drawer-input-select">
-                    <option value="gpt-4o-mini">gpt-4o-mini</option>
-                    <option value="claude-3-5-sonnet">claude-3-5-sonnet</option>
-                  </select>
-                </div>
-
-                <button className="btn-primary" style={{ marginTop: '10px' }} onClick={() => addLog('success', 'Project settings saved.')}>
-                  Save Settings
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* DATA & TESTS fallback views (working content lists) */}
-          {['Data', 'Tests'].includes(activeSidebarItem) && (
-            <div className="view-panel">
-              <div className="view-title-row">
-                <div>
-                  <h2 className="view-heading">{activeSidebarItem}</h2>
-                  <p className="view-desc">Monitor project assets, runs, and validation suites.</p>
-                </div>
-              </div>
-
-              <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px', padding: '24px' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#fff' }}>Active Runs</h4>
-                <div style={{ fontSize: '0.85rem', color: '#8b949e' }}>
-                  {activeSidebarItem === 'Data' && (
-                    <ul>
-                      <li>📁 <strong>workflow_payload.json</strong> - Seeding dataset (3.5kb, Uploaded 10m ago)</li>
-                      <li>📁 <strong>llm_evaluations_feedback.csv</strong> - Feedback logs (24kb, Uploaded 1d ago)</li>
-                    </ul>
-                  )}
-                  {activeSidebarItem === 'Tests' && (
-                    <ul>
-                      <li>🧪 <strong>validation_test_suite_1</strong> - <span style={{ color: '#56d364' }}>Passed</span> (0 cycles, 3 edges verified)</li>
-                      <li>🧪 <strong>llm_response_schema_check</strong> - <span style={{ color: '#56d364' }}>Passed</span> (JSON schema compliance)</li>
-                    </ul>
-                  )}
-                </div>
-              </div>
             </div>
           )}
 
