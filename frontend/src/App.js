@@ -16,19 +16,18 @@ import {
   Rocket,
   TestTube,
   Play,
-  Github,
   CheckCircle2,
   Plus,
   Trash2,
   Edit3,
-  Search,
   Upload,
   Send,
   GitBranch,
   Server,
   RefreshCw,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  X
 } from 'lucide-react';
 
 // Foolproof inline SVG for Github to prevent version/import mismatches
@@ -172,6 +171,19 @@ export default function App() {
 
   const [editorMode, setEditorMode] = useState('dashboard'); // 'dashboard' | 'canvas'
 
+  // --- DYNAMIC CONTROLLED MODALS STATE ---
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFlowName, setCreateFlowName] = useState('My New Pipeline');
+  const [createFlowTemplate, setCreateFlowTemplate] = useState('blank'); // 'blank' | 'llm' | 'conditional' | 'api'
+
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renameFlowId, setRenameFlowId] = useState(null);
+  const [renameFlowName, setRenameFlowName] = useState('');
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteFlowId, setDeleteFlowId] = useState(null);
+  const [deleteFlowName, setDeleteFlowName] = useState('');
+
   // Handle URL navigation changes
   useEffect(() => {
     const handleLocationChange = () => {
@@ -238,65 +250,129 @@ export default function App() {
   const handleOpenFlow = (flow) => {
     setActiveFlowId(flow.id);
     setPipelineName(flow.name);
-    // Load into Zustand store
     setWorkflow(flow.nodes || [], flow.edges || []);
     localStorage.setItem('pipeline_studio_active_flow_id', flow.id);
     setEditorMode('canvas');
     addLog('info', `Opened workflow pipeline '${flow.name}' in editor.`);
   };
 
-  const handleCreateNewFlow = () => {
-    const name = prompt("Enter a name for your new workflow pipeline:", "My New Pipeline");
-    if (!name) return;
+  const handleOpenCreateModal = () => {
+    setCreateFlowName(`Pipeline ${flows.length + 1}`);
+    setCreateFlowTemplate('blank');
+    setShowCreateModal(true);
+  };
+
+  const handleConfirmCreateFlow = () => {
+    if (!createFlowName.trim()) {
+      alert("Pipeline name cannot be empty!");
+      return;
+    }
+
+    let initialNodes = [];
+    let initialEdges = [];
+
+    if (createFlowTemplate === 'llm') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 150, y: 80 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Support Trigger' } },
+        { id: 'text-1', type: 'text', position: { x: 400, y: 50 }, data: { id: 'text-1', nodeType: 'text', customTitle: 'Prompt Block', text: 'Analyze severity of: {{input}}' } },
+        { id: 'llm-1', type: 'llm', position: { x: 300, y: 220 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'GPT-4o Mini', model: 'gpt-4o-mini' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 300, y: 400 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'Client Responder' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'text-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-3', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+      ];
+    } else if (createFlowTemplate === 'conditional') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'User Query' } },
+        { id: 'conditional-1', type: 'conditional', position: { x: 250, y: 200 }, data: { id: 'conditional-1', nodeType: 'conditional', customTitle: 'Query Router' } },
+        { id: 'llm-1', type: 'llm', position: { x: 100, y: 350 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'Classifier A' } },
+        { id: 'llm-2', type: 'llm', position: { x: 400, y: 350 }, data: { id: 'llm-2', nodeType: 'llm', customTitle: 'Classifier B' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'conditional-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'conditional-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-3', source: 'conditional-1', target: 'llm-2', type: 'smoothstep', animated: true }
+      ];
+    } else if (createFlowTemplate === 'api') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Incoming Event' } },
+        { id: 'api-1', type: 'api', position: { x: 250, y: 220 }, data: { id: 'api-1', nodeType: 'api', customTitle: 'Webhook Sender' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 250, y: 390 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'API Acknowledge' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'api-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'api-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+      ];
+    }
+
     const newId = `flow-${Date.now()}`;
     const newFlow = {
       id: newId,
-      name: name,
-      nodeCount: 0,
+      name: createFlowName,
+      nodeCount: initialNodes.length,
       lastEdited: 'Just now',
-      nodes: [],
-      edges: []
+      nodes: initialNodes,
+      edges: initialEdges
     };
+
     const updated = [...flows, newFlow];
     setFlows(updated);
     localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+    setShowCreateModal(false);
     handleOpenFlow(newFlow);
-    addLog('success', `Created new workflow pipeline '${name}'.`);
+    addLog('success', `Created pipeline '${createFlowName}' with template '${createFlowTemplate}'.`);
   };
 
-  const handleDeleteFlow = (flowId, e) => {
-    e.stopPropagation();
-    if (flows.length <= 1) {
-      alert("You must keep at least one workflow pipeline in your workspace!");
-      return;
-    }
-    if (!window.confirm("Are you sure you want to delete this workflow?")) {
-      return;
-    }
-    const updated = flows.filter((f) => f.id !== flowId);
-    setFlows(updated);
-    localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
-    addLog('info', `Deleted workflow pipeline.`);
-  };
-
-  const handleRenameFlow = (flowId, e) => {
+  const handleOpenRenameModal = (flowId, e) => {
     e.stopPropagation();
     const flow = flows.find(f => f.id === flowId);
     if (!flow) return;
-    const newName = prompt("Rename your workflow pipeline:", flow.name);
-    if (!newName) return;
+    setRenameFlowId(flowId);
+    setRenameFlowName(flow.name);
+    setShowRenameModal(true);
+  };
+
+  const handleConfirmRenameFlow = () => {
+    if (!renameFlowName.trim()) {
+      alert("Pipeline name cannot be empty!");
+      return;
+    }
     const updated = flows.map((f) => {
-      if (f.id === flowId) {
-        return { ...f, name: newName };
+      if (f.id === renameFlowId) {
+        return { ...f, name: renameFlowName };
       }
       return f;
     });
     setFlows(updated);
     localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
-    if (flowId === activeFlowId) {
-      setPipelineName(newName);
+    if (renameFlowId === activeFlowId) {
+      setPipelineName(renameFlowName);
     }
-    addLog('info', `Renamed workflow pipeline to '${newName}'.`);
+    setShowRenameModal(false);
+    addLog('info', `Renamed workflow pipeline to '${renameFlowName}'.`);
+  };
+
+  const handleOpenDeleteModal = (flowId, e) => {
+    e.stopPropagation();
+    if (flows.length <= 1) {
+      alert("You must keep at least one workflow pipeline in your workspace!");
+      return;
+    }
+    const flow = flows.find(f => f.id === flowId);
+    if (!flow) return;
+    setDeleteFlowId(flowId);
+    setDeleteFlowName(flow.name);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDeleteFlow = () => {
+    const updated = flows.filter((f) => f.id !== deleteFlowId);
+    setFlows(updated);
+    localStorage.setItem('pipeline_studio_flows', JSON.stringify(updated));
+    setShowDeleteModal(false);
+    addLog('info', `Deleted workflow pipeline.`);
   };
 
   // 1. Live Backend Deploy Call
@@ -698,7 +774,7 @@ export default function App() {
                   <h2 className="view-heading">Workflow Pipelines</h2>
                   <p className="view-desc">Create, manage, and design custom topological LLM routing pipelines.</p>
                 </div>
-                <button className="btn-primary" style={{ width: 'auto', padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleCreateNewFlow}>
+                <button className="btn-primary" style={{ width: 'auto', padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleOpenCreateModal}>
                   <Plus size={14} />
                   Create New Flow
                 </button>
@@ -716,10 +792,10 @@ export default function App() {
                         <Workflow size={20} style={{ color: '#58a6ff' }} />
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <button className="flow-card-action-btn" title="Rename Flow" onClick={(e) => handleRenameFlow(flow.id, e)}>
+                        <button className="flow-card-action-btn" title="Rename Flow" onClick={(e) => handleOpenRenameModal(flow.id, e)}>
                           <Edit3 size={12} />
                         </button>
-                        <button className="flow-card-action-btn delete" title="Delete Flow" onClick={(e) => handleDeleteFlow(flow.id, e)}>
+                        <button className="flow-card-action-btn delete" title="Delete Flow" onClick={(e) => handleOpenDeleteModal(flow.id, e)}>
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -1320,6 +1396,123 @@ export default function App() {
                 </button>
                 <button className="btn-select-repo" onClick={() => setShowGitHubModal(false)}>Close</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DYNAMIC CREATE FLOW MODAL --- */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <Workflow size={18} style={{ color: '#58a6ff' }} />
+                <span>Create New Pipeline</span>
+              </h3>
+              <button className="modal-close-btn" onClick={() => setShowCreateModal(false)}>&times;</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                <label className="drawer-field-label">Workflow Name</label>
+                <input
+                  type="text"
+                  className="chat-text-input"
+                  value={createFlowName}
+                  onChange={(e) => setCreateFlowName(e.target.value)}
+                  placeholder="e.g. Severity Classifier"
+                  autoFocus
+                />
+              </div>
+
+              <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '8px' }}>
+                <label className="drawer-field-label">Select Starter Template</label>
+                <div className="template-select-grid">
+                  {[
+                    { id: 'blank', title: 'Blank Canvas', desc: 'Start with an empty flow canvas.', icon: <Workflow size={14} /> },
+                    { id: 'llm', title: 'LLM Reasoner', desc: 'Input -> Prompt -> LLM -> Output.', icon: <Rocket size={14} /> },
+                    { id: 'conditional', title: 'Conditional Router', desc: 'Topological branch query routing.', icon: <GitBranch size={14} /> },
+                    { id: 'api', title: 'Webhook API', desc: 'Webhook event trigger webhook.', icon: <Server size={14} /> }
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      className={`template-select-card ${createFlowTemplate === t.id ? 'active' : ''}`}
+                      onClick={() => setCreateFlowTemplate(t.id)}
+                    >
+                      <div className="template-card-title">
+                        {t.icon}
+                        <span>{t.title}</span>
+                      </div>
+                      <div className="template-card-desc">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-select-repo" onClick={() => setShowCreateModal(false)}>Cancel</button>
+              <button className="btn-primary" style={{ width: 'auto' }} onClick={handleConfirmCreateFlow}>Create Pipeline</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DYNAMIC RENAME FLOW MODAL --- */}
+      {showRenameModal && (
+        <div className="modal-overlay" onClick={() => setShowRenameModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title">
+                <Edit3 size={18} style={{ color: '#58a6ff' }} />
+                <span>Rename Workflow</span>
+              </h3>
+              <button className="modal-close-btn" onClick={() => setShowRenameModal(false)}>&times;</button>
+            </div>
+
+            <div className="modal-body">
+              <div className="drawer-field-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
+                <label className="drawer-field-label">Workflow Name</label>
+                <input
+                  type="text"
+                  className="chat-text-input"
+                  value={renameFlowName}
+                  onChange={(e) => setRenameFlowName(e.target.value)}
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-select-repo" onClick={() => setShowRenameModal(false)}>Cancel</button>
+              <button className="btn-primary" style={{ width: 'auto' }} onClick={handleConfirmRenameFlow}>Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DYNAMIC DELETE FLOW MODAL --- */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3 className="modal-title" style={{ color: '#ff7b72' }}>
+                <Trash2 size={18} />
+                <span>Delete Workflow?</span>
+              </h3>
+              <button className="modal-close-btn" onClick={() => setShowDeleteModal(false)}>&times;</button>
+            </div>
+
+            <div className="modal-body">
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#8b949e', lineHeight: '1.5' }}>
+                Are you sure you want to delete the workflow pipeline <strong>"{deleteFlowName}"</strong>? This will remove all associated nodes and edges from LocalStorage. This action cannot be undone.
+              </p>
+            </div>
+
+            <div className="modal-footer">
+              <button className="btn-select-repo" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <button className="btn-primary" style={{ width: 'auto', backgroundColor: '#ff7b72', borderColor: '#ff7b72' }} onClick={handleConfirmDeleteFlow}>Delete Pipeline</button>
             </div>
           </div>
         </div>
