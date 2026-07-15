@@ -6,6 +6,30 @@ import { SubmitButton } from './submit';
 import { LandingPage } from './landing/LandingPage';
 import { NodeConfigDrawer } from './components/NodeConfigDrawer';
 
+// Import beautiful vector icons from Lucide React
+import {
+  Menu,
+  Workflow,
+  FileText,
+  Database,
+  Terminal,
+  Rocket,
+  TestTube,
+  Play,
+  Github,
+  CheckCircle2,
+  Plus,
+  Trash2,
+  Edit3,
+  Search,
+  Upload,
+  Send,
+  GitBranch,
+  Server,
+  RefreshCw,
+  Clock
+} from 'lucide-react';
+
 export default function App() {
   // Navigation / Routing State
   const [route, setRoute] = useState(() => window.location.pathname);
@@ -39,15 +63,11 @@ export default function App() {
 
   // System Logs Console State
   const [systemLogs, setSystemLogs] = useState([
-    { time: '11:40:02', level: 'info', msg: 'Pipeline Studio v2.0 Workspace initialized.' },
+    { time: '11:40:02', level: 'info', msg: 'Pipeline Studio Workspace initialized.' },
     { time: '11:40:15', level: 'info', msg: 'Zustand workflow state seeded successfully.' },
     { time: '11:41:00', level: 'success', msg: 'Established hot connection to topological validation backend.' },
   ]);
   const [logsFilter, setLogsFilter] = useState('all');
-
-  // Integrations/Connections State
-  const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
-  const [anthropicKey, setAnthropicKey] = useState('sk-ant-••••••••••••••••••••');
 
   // --- DYNAMIC DATA VIEW STATE ---
   const [datasets, setDatasets] = useState([
@@ -88,10 +108,14 @@ export default function App() {
     JSON.stringify({ input: "Describe visual workflow editors" }, null, 2)
   );
   const [chatMessages, setChatMessages] = useState([
-    { sender: 'assistant', text: '👋 Welcome to the Pipeline API Playground! Once you click "Deploy" in the top bar, you can test your visual canvas here by typing an input and running the workflow.' }
+    { sender: 'assistant', text: 'Welcome to the Pipeline API Playground! Once you click "Deploy" in the top bar, you can test your visual canvas here by typing an input and running the workflow.' }
   ]);
   const [isPlaygroundRunning, setIsPlaygroundRunning] = useState(false);
   const [playgroundLogs, setPlaygroundLogs] = useState([]);
+
+  // Integrations/Connections State
+  const [openaiKey, setOpenaiKey] = useState('sk-proj-••••••••••••••••••••');
+  const [anthropicKey, setAnthropicKey] = useState('sk-ant-••••••••••••••••••••');
 
   // Handle URL navigation changes
   useEffect(() => {
@@ -227,11 +251,11 @@ export default function App() {
         data.execution_logs.forEach((log) => addLog('success', `[Execution Run] ${log}`));
       } else {
         const errMsg = data.detail || 'Pipeline execution failed.';
-        setChatMessages((prev) => [...prev, { sender: 'assistant', text: `❌ Error: ${errMsg}` }]);
+        setChatMessages((prev) => [...prev, { sender: 'assistant', text: `Error: ${errMsg}` }]);
         addLog('error', `Execution failed: ${errMsg}`);
       }
     } catch (e) {
-      setChatMessages((prev) => [...prev, { sender: 'assistant', text: `❌ Connection Error: ${e.message}` }]);
+      setChatMessages((prev) => [...prev, { sender: 'assistant', text: `Connection Error: ${e.message}` }]);
       addLog('error', `API Playground run failed: ${e.message}`);
     } finally {
       setIsPlaygroundRunning(false);
@@ -282,7 +306,6 @@ export default function App() {
     const activeDataset = datasets[selectedDatasetIdx];
     const results = [];
     
-    // Simulate batch progression
     for (let idx = 0; idx < activeDataset.rows.length; idx++) {
       const row = activeDataset.rows[idx];
       const percent = Math.round(((idx + 1) / activeDataset.rows.length) * 100);
@@ -318,7 +341,7 @@ export default function App() {
       }
 
       setTestProgress(percent);
-      await new Promise(r => setTimeout(r, 400)); // micro delay
+      await new Promise(r => setTimeout(r, 400));
     }
 
     setTestSuiteResults(results);
@@ -345,15 +368,15 @@ export default function App() {
     alert(`Successfully added '${newNode.data.customTitle}' to the visual canvas! Go to 'Flows' to inspect it.`);
   };
 
-  // Sidebar Items (Reports, Settings, and Connections fully removed)
+  // Sidebar Items (Embellished with clean vector SVGs instead of emojis)
   const sidebarItems = [
-    { name: 'Flows', icon: '⚡' },
-    { name: 'Prompts', icon: '📝' },
-    { name: 'Data', icon: '📊' },
-    { name: 'Logs', icon: '📋' },
-    { name: 'Deployments', icon: '🚀' },
-    { name: 'Tests', icon: '🧪' },
-    { name: 'API Playground', icon: '🎮' },
+    { name: 'Flows', icon: <Workflow size={15} /> },
+    { name: 'Prompts', icon: <FileText size={15} /> },
+    { name: 'Data', icon: <Database size={15} /> },
+    { name: 'Logs', icon: <Terminal size={15} /> },
+    { name: 'Deployments', icon: <Rocket size={15} /> },
+    { name: 'Tests', icon: <TestTube size={15} /> },
+    { name: 'API Playground', icon: <Play size={15} /> },
   ];
 
   // Route back to Landing Page
@@ -439,7 +462,10 @@ export default function App() {
 
         <div className="top-bar-right">
           <button className="github-connect-btn" onClick={() => setShowGitHubModal(true)}>
-            🐙 Connect GitHub
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <Github size={14} />
+              Connect GitHub
+            </span>
           </button>
 
           <div className="deploy-dropdown-wrapper">
@@ -475,14 +501,15 @@ export default function App() {
         {/* Sidebar Nav */}
         <aside className={`sidebar ${isSidebarCollapsed ? 'collapsed' : ''}`}>
           <div className="sidebar-top">
-            <div className="sidebar-header">
+            <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span className="sidebar-title">NAVIGATION</span>
               <button
                 className="hamburger-btn"
                 onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
                 title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                ☰
+                <Menu size={14} />
               </button>
             </div>
 
@@ -493,7 +520,9 @@ export default function App() {
                   className={`nav-item-btn ${activeSidebarItem === item.name ? 'active' : ''}`}
                   onClick={() => handleSidebarItemClick(item.name)}
                 >
-                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                    {item.icon}
+                  </span>
                   <span className="nav-label">{item.name}</span>
                 </button>
               ))}
@@ -514,11 +543,17 @@ export default function App() {
               <PipelineUI />
               <div className="bottom-left-toolbar">
                 <button className="canvas-tool-btn" title="Templates" onClick={() => setShowTemplatesModal(true)}>
-                  📋 Templates
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <FileText size={13} />
+                    Templates
+                  </span>
                 </button>
                 <span className="btn-separator"></span>
                 <button className="canvas-tool-btn" title="Sticky Comments" onClick={() => alert("Note added to canvas.")}>
-                  ✍️ Add Note
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <Edit3 size={13} />
+                    Add Note
+                  </span>
                 </button>
               </div>
               <SubmitButton />
@@ -534,8 +569,9 @@ export default function App() {
                   <p className="view-desc">Monitor, search, and edit prompt blocks inside LLM and Text template nodes.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button className="btn-primary" style={{ width: 'auto', padding: '10px 16px' }} onClick={handleAddPromptNodeToCanvas}>
-                    + Add Prompt Node to Canvas
+                  <button className="btn-primary" style={{ width: 'auto', padding: '10px 16px', display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={handleAddPromptNodeToCanvas}>
+                    <Plus size={14} />
+                    Add Prompt Node to Canvas
                   </button>
                   <input
                     type="text"
@@ -567,7 +603,6 @@ export default function App() {
                       
                       const isEditing = editingPromptId === n.id;
 
-                      // Variable analysis logic
                       const varMatches = text.match(/\{\{([^}]+)\}\}/g) || [];
                       const vars = varMatches.map(m => m.replace(/[{}]/g, ''));
 
@@ -590,7 +625,6 @@ export default function App() {
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                               {vars.length > 0 ? (
                                 vars.map((v, i) => {
-                                  // Mock check if connected
                                   const isConnected = v === 'input' || v === 'payload' || edges.some(e => e.target === n.id);
                                   return (
                                     <span
@@ -679,7 +713,8 @@ export default function App() {
                       onChange={(e) => setNewDatasetCsv(e.target.value)}
                     />
                   </div>
-                  <button className="btn-primary" onClick={handleImportDataset}>
+                  <button className="btn-primary" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} onClick={handleImportDataset}>
+                    <Upload size={14} />
                     Import CSV Dataset
                   </button>
                 </div>
@@ -719,6 +754,7 @@ export default function App() {
                             <td>
                               <button
                                 className="btn-schema-delete"
+                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
                                 onClick={() => {
                                   const updatedSets = [...datasets];
                                   updatedSets[selectedDatasetIdx].rows.splice(rIdx, 1);
@@ -726,7 +762,7 @@ export default function App() {
                                   addLog('info', 'Deleted dataset row.');
                                 }}
                               >
-                                &times;
+                                <Trash2 size={12} />
                               </button>
                             </td>
                           </tr>
@@ -761,10 +797,11 @@ export default function App() {
                   </select>
                   <button
                     className="btn-primary"
-                    style={{ width: 'auto', padding: '10px 20px' }}
+                    style={{ width: 'auto', padding: '10px 20px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                     onClick={handleRunBatchTests}
                     disabled={isBatchTesting}
                   >
+                    <Play size={14} />
                     {isBatchTesting ? 'Running Suite...' : 'Run Test Suite'}
                   </button>
                 </div>
@@ -822,7 +859,7 @@ export default function App() {
                 </table>
               ) : (
                 <div style={{ padding: '60px', textAlign: 'center', background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🧪</div>
+                  <TestTube size={36} style={{ marginBottom: '16px', opacity: 0.5 }} />
                   <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>No Test Runs Recorded</h4>
                   <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#8b949e' }}>Click 'Run Test Suite' to batch execute the active pipeline layout over row queries.</p>
                 </div>
@@ -934,10 +971,11 @@ export default function App() {
                     />
                     <button
                       className="btn-primary"
-                      style={{ width: 'auto', whiteSpace: 'nowrap' }}
+                      style={{ width: 'auto', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                       disabled={!isDeployed || isPlaygroundRunning}
                       onClick={handlePlaygroundSend}
                     >
+                      <Send size={13} />
                       {isPlaygroundRunning ? 'Running...' : 'Run Query'}
                     </button>
                   </div>
@@ -945,8 +983,6 @@ export default function App() {
               </div>
             </div>
           )}
-
-
 
           {/* DEPLOYMENTS VIEW */}
           {activeSidebarItem === 'Deployments' && (
@@ -981,7 +1017,7 @@ export default function App() {
                 </div>
               ) : (
                 <div style={{ padding: '60px', textAlign: 'center', background: '#0d1117', border: '1px solid #30363d', borderRadius: '12px' }}>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '16px' }}>🚀</div>
+                  <Rocket size={36} style={{ marginBottom: '16px', opacity: 0.5 }} />
                   <h4 style={{ margin: '0 0 8px 0', color: '#fff' }}>No Active Deployments</h4>
                   <p style={{ margin: '0 0 16px 0', fontSize: '0.85rem', color: '#8b949e' }}>Deploy your visual layout from the Editor to generate live webhook routes.</p>
                   <button className="btn-primary" style={{ width: 'auto' }} onClick={handleDeploy}>Deploy Now</button>
@@ -1002,8 +1038,9 @@ export default function App() {
       </div>
 
       {/* --- POPUP TOAST --- */}
-      <div className={`toast-notification ${showDeployToast ? 'visible' : ''}`}>
-        🚀 Deployed successfully! Webhook target: http://127.0.0.1:8002/pipelines/run
+      <div className={`toast-notification ${showDeployToast ? 'visible' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <CheckCircle2 size={16} style={{ color: '#56d364' }} />
+        <span>Deployed successfully! Webhook target: http://127.0.0.1:8002/pipelines/run</span>
       </div>
 
       {/* --- TEMPLATES MODAL --- */}
@@ -1018,10 +1055,10 @@ export default function App() {
               <p style={{ color: '#8b949e', fontSize: '0.85rem' }}>Select a boilerplate starter template to seed the canvas viewport:</p>
               <div className="templates-grid">
                 {[
-                  { icon: '🤖', title: 'Simple LLM Reasoner', desc: 'Input -> Prompt template -> LLM -> Output Responder' },
-                  { icon: '🔀', title: 'Conditional Router', desc: 'Route inputs between two LLMs based on text classifier checks.' },
-                  { icon: '🔌', title: 'API Webhook pipeline', desc: 'Collect API payload inputs and trigger REST endpoint triggers.' },
-                  { icon: '⏱️', title: 'Feedback Loop', desc: 'Create delay triggers and callback loopback nodes for logs.' },
+                  { icon: <Workflow size={20} />, title: 'Simple LLM Reasoner', desc: 'Input -> Prompt template -> LLM -> Output Responder' },
+                  { icon: <GitBranch size={20} />, title: 'Conditional Router', desc: 'Route inputs between two LLMs based on text classifier checks.' },
+                  { icon: <Server size={20} />, title: 'API Webhook pipeline', desc: 'Collect API payload inputs and trigger REST endpoint triggers.' },
+                  { icon: <RefreshCw size={20} />, title: 'Feedback Loop', desc: 'Create delay triggers and callback loopback nodes for logs.' },
                 ].map((item) => (
                   <div
                     key={item.title}
@@ -1031,7 +1068,7 @@ export default function App() {
                       setShowTemplatesModal(false);
                     }}
                   >
-                    <span className="template-icon">{item.icon}</span>
+                    <span className="template-icon" style={{ display: 'inline-block', color: '#58a6ff' }}>{item.icon}</span>
                     <div className="template-title">{item.title}</div>
                     <div className="template-desc">{item.desc}</div>
                   </div>

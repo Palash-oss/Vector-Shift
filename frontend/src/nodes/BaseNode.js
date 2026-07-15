@@ -1,6 +1,20 @@
 import React from 'react';
 import { Handle, Position } from 'reactflow';
 import { useStore } from '../store';
+import { 
+  Download, 
+  Upload, 
+  Cpu, 
+  Type, 
+  GitFork, 
+  Filter, 
+  Calculator, 
+  Server, 
+  Clock, 
+  HelpCircle, 
+  Trash2,
+  CheckCircle2
+} from 'lucide-react';
 
 export const BaseNode = ({
   id,
@@ -27,31 +41,31 @@ export const BaseNode = ({
     setActiveNodeId(id);
   };
 
-  // Map type to Category & Icon
+  // Map type to Category & Icon using clean Lucide icons
   const getCategoryAndIcon = (t) => {
     switch (t) {
       case 'input':
       case 'customInput':
-        return { category: 'Interface', icon: '📥', class: 'category-interface' };
+        return { category: 'Interface', icon: <Download size={14} />, class: 'category-interface' };
       case 'output':
       case 'customOutput':
-        return { category: 'Interface', icon: '📤', class: 'category-interface' };
+        return { category: 'Interface', icon: <Upload size={14} />, class: 'category-interface' };
       case 'llm':
-        return { category: 'AI', icon: '🤖', class: 'category-ai' };
+        return { category: 'AI', icon: <Cpu size={14} />, class: 'category-ai' };
       case 'text':
-        return { category: 'AI', icon: '📝', class: 'category-ai' };
+        return { category: 'AI', icon: <Type size={14} />, class: 'category-ai' };
       case 'conditional':
-        return { category: 'Logic', icon: '🔀', class: 'category-logic' };
+        return { category: 'Logic', icon: <GitFork size={14} />, class: 'category-logic' };
       case 'filter':
-        return { category: 'Logic', icon: '🔍', class: 'category-logic' };
+        return { category: 'Logic', icon: <Filter size={14} />, class: 'category-logic' };
       case 'math':
-        return { category: 'Logic', icon: '🧩', class: 'category-logic' };
+        return { category: 'Logic', icon: <Calculator size={14} />, class: 'category-logic' };
       case 'api':
-        return { category: 'Apps', icon: '🔌', class: 'category-apps' };
+        return { category: 'Apps', icon: <Server size={14} />, class: 'category-apps' };
       case 'timer':
-        return { category: 'Apps', icon: '⏱️', class: 'category-apps' };
+        return { category: 'Apps', icon: <Clock size={14} />, class: 'category-apps' };
       default:
-        return { category: 'General', icon: '⚙️', class: 'category-logic' };
+        return { category: 'General', icon: <HelpCircle size={14} />, class: 'category-logic' };
     }
   };
 
@@ -70,7 +84,7 @@ export const BaseNode = ({
       {/* 2. Success Status Alert Header */}
       {status === 'success' && (
         <div className="node-header-validated">
-          <span>✓</span>
+          <CheckCircle2 size={12} style={{ marginRight: '4px' }} />
           <span>Test Successful</span>
         </div>
       )}
@@ -81,7 +95,7 @@ export const BaseNode = ({
           <span className="node-category-label">{category}</span>
         </div>
         <button className="node-delete-btn" onClick={handleDelete} title="Delete Node">
-          &times;
+          <Trash2 size={11} />
         </button>
       </div>
 
