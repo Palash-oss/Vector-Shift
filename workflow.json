@@ -1,0 +1,92 @@
+{
+  "nodes": [
+    {
+      "id": "llm-2",
+      "type": "llm",
+      "position": {
+        "x": -311.42384576901713,
+        "y": 104.77728955124041
+      },
+      "data": {
+        "id": "llm-2",
+        "nodeType": "llm",
+        "customTitle": "llm",
+        "model": "gpt-4o-mini",
+        "inputPills": {
+          "tools": true,
+          "messages": false,
+          "memories": false,
+          "attachments": false
+        },
+        "schemaFields": [
+          {
+            "name": "response",
+            "type": "String",
+            "required": true
+          },
+          {
+            "name": "confidence",
+            "type": "Float",
+            "required": false
+          }
+        ],
+        "promptBlocks": [
+          {
+            "id": "1",
+            "role": "System",
+            "text": "You are a helpful AI assistant."
+          },
+          {
+            "id": "2",
+            "role": "User",
+            "text": "Analyze this input: {{input}}"
+          }
+        ]
+      },
+      "width": 501,
+      "height": 138,
+      "selected": false,
+      "positionAbsolute": {
+        "x": -311.42384576901713,
+        "y": 104.77728955124041
+      },
+      "dragging": false
+    },
+    {
+      "id": "llm-3",
+      "type": "llm",
+      "position": {
+        "x": 337.7295370682998,
+        "y": 177.35979377399553
+      },
+      "data": {
+        "id": "llm-3",
+        "nodeType": "llm"
+      },
+      "width": 501,
+      "height": 138,
+      "selected": false,
+      "positionAbsolute": {
+        "x": 337.7295370682998,
+        "y": 177.35979377399553
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "llm-2",
+      "sourceHandle": "llm-2-response",
+      "target": "llm-3",
+      "targetHandle": "llm-3-system",
+      "id": "edge-llm-2-llm-2-response-llm-3-llm-3-system",
+      "type": "smoothstep",
+      "animated": true,
+      "markerEnd": {
+        "type": "arrow",
+        "height": "20px",
+        "width": "20px"
+      }
+    }
+  ]
+}
