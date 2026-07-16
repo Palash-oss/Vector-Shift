@@ -608,6 +608,78 @@ export default function App() {
     alert(`Successfully added '${newNode.data.customTitle}' to the visual canvas! Go to 'Flows' to inspect it.`);
   };
 
+  const handleAddNoteToCanvas = () => {
+    const nodeID = getNodeID('note');
+    const newNode = {
+      id: nodeID,
+      type: 'note',
+      position: { x: 250 + Math.random() * 50, y: 200 + Math.random() * 50 },
+      data: {
+        id: nodeID,
+        nodeType: 'note',
+        customTitle: 'Sticky Note',
+        text: 'Type your note/sticky comment here...'
+      }
+    };
+    addNode(newNode);
+    addLog('success', `Added new Sticky Note [${nodeID}] directly to the visual canvas.`);
+  };
+
+  const handleLoadTemplate = (templateTitle) => {
+    let initialNodes = [];
+    let initialEdges = [];
+
+    if (templateTitle === 'Simple LLM Reasoner') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 150, y: 80 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Support Trigger' } },
+        { id: 'text-1', type: 'text', position: { x: 400, y: 50 }, data: { id: 'text-1', nodeType: 'text', customTitle: 'Prompt Block', text: 'Analyze severity of: {{input}}' } },
+        { id: 'llm-1', type: 'llm', position: { x: 300, y: 220 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'GPT-4o Mini', model: 'gpt-4o-mini' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 300, y: 400 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'Client Responder' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'text-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-3', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+      ];
+    } else if (templateTitle === 'Conditional Router') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'User Query' } },
+        { id: 'conditional-1', type: 'conditional', position: { x: 250, y: 200 }, data: { id: 'conditional-1', nodeType: 'conditional', customTitle: 'Query Router' } },
+        { id: 'llm-1', type: 'llm', position: { x: 100, y: 350 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'Classifier A' } },
+        { id: 'llm-2', type: 'llm', position: { x: 400, y: 350 }, data: { id: 'llm-2', nodeType: 'llm', customTitle: 'Classifier B' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'conditional-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'conditional-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-3', source: 'conditional-1', target: 'llm-2', type: 'smoothstep', animated: true }
+      ];
+    } else if (templateTitle === 'API Webhook pipeline') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Incoming Event' } },
+        { id: 'api-1', type: 'api', position: { x: 250, y: 220 }, data: { id: 'api-1', nodeType: 'api', customTitle: 'Webhook Sender' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 250, y: 390 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'API Acknowledge' } }
+      ];
+      initialEdges = [
+        { id: 'edge-1', source: 'customInput-1', target: 'api-1', type: 'smoothstep', animated: true },
+        { id: 'edge-2', source: 'api-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
+      ];
+    } else if (templateTitle === 'Feedback Loop') {
+      initialNodes = [
+        { id: 'customInput-1', type: 'customInput', position: { x: 250, y: 50 }, data: { id: 'customInput-1', nodeType: 'customInput', customTitle: 'Input Trigger' } },
+        { id: 'llm-1', type: 'llm', position: { x: 250, y: 230 }, data: { id: 'llm-1', nodeType: 'llm', customTitle: 'LLM Reasoner' } },
+        { id: 'customOutput-1', type: 'customOutput', position: { x: 250, y: 410 }, data: { id: 'customOutput-1', nodeType: 'customOutput', customTitle: 'Output Responder' } }
+      ];
+      initialEdges = [
+        { id: 'edge-customInput-1-llm-1', source: 'customInput-1', target: 'llm-1', type: 'smoothstep', animated: true },
+        { id: 'edge-llm-1-customOutput-1', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true },
+        { id: 'edge-loopback', source: 'customOutput-1', target: 'customInput-1', type: 'smoothstep', label: 'Response Loop', animated: true }
+      ];
+    }
+
+    setWorkflow(initialNodes, initialEdges);
+    addLog('success', `Loaded pipeline starter template: '${templateTitle}' into active workspace.`);
+  };
+
   // Sidebar Items
   const sidebarItems = [
     { name: 'Flows', icon: <Workflow size={15} /> },
@@ -851,7 +923,7 @@ export default function App() {
                   </span>
                 </button>
                 <span className="btn-separator"></span>
-                <button className="canvas-tool-btn" title="Sticky Comments" onClick={() => alert("Note added to canvas.")}>
+                <button className="canvas-tool-btn" title="Sticky Comments" onClick={handleAddNoteToCanvas}>
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                     <Edit3 size={13} />
                     Add Note
@@ -1366,7 +1438,7 @@ export default function App() {
                     key={item.title}
                     className="template-card"
                     onClick={() => {
-                      alert(`Template '${item.title}' loaded to store.`);
+                      handleLoadTemplate(item.title);
                       setShowTemplatesModal(false);
                     }}
                   >

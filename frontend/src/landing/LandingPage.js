@@ -99,39 +99,38 @@ export const LandingPage = ({ navigate }) => {
             <span className="logo-text">Pipeline Studio</span>
           </div>
           <div className="landing-nav-links">
-            <a href="#product" className="nav-link">Product</a>
-            <a href="#solutions" className="nav-link">Solutions</a>
+            <a href="#product" className="nav-link">Product <span className="chevron-down" style={{ fontSize: '0.65rem' }}>▼</span></a>
+            <a href="#solutions" className="nav-link">Solutions <span className="chevron-down" style={{ fontSize: '0.65rem' }}>▼</span></a>
             <a href="#docs" className="nav-link">Docs</a>
-            <div className="nav-link-dropdown">
-              <a href="#pricing" className="nav-link">Pricing <span className="chevron-down">▼</span></a>
-            </div>
+            <a href="#resources" className="nav-link">Resources <span className="chevron-down" style={{ fontSize: '0.65rem' }}>▼</span></a>
+            <a href="#pricing" className="nav-link">Pricing</a>
           </div>
           <div className="landing-nav-actions">
-            <button className="btn-ghost" onClick={handleLaunch}>Sign Up</button>
-            <button className="btn-primary" onClick={handleLaunch}>Launch App</button>
+            <button className="btn-primary" onClick={handleLaunch}>Sign Up</button>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
       <header className="landing-hero">
+        {/* Moving red light blob on the left */}
+        <div className="moving-red-light"></div>
         <div className="hero-container">
-          <div className="pill-badge">
-            <span className="pill-pulse"></span>
-            <span>Introducing Pipeline Studio v2.0</span>
+          <div className="pill-badge" style={{ cursor: 'pointer' }} onClick={handleLaunch}>
+            <span>Introducing Pipeline Studio</span>
+            <span style={{ marginLeft: '4px', fontSize: '0.7rem' }}>➔</span>
           </div>
           <h1 className="hero-title">
-            Build AI Agents & Pipelines
+            Turn Domain Expertise into
             <br />
-            <span className="text-gradient">Without Writing Boilerplate</span>
+            Reliable <span className="text-red">AI Agents</span>
           </h1>
           <p className="hero-subtitle">
-            A visual flow builder to assemble, validate, and deploy production-grade LLM chains, custom logic nodes, and API connections in seconds.
+            AI middleware for teams to build Agents visually, Deploy on Serverless, and Optimize continuously while we handle the rest.
           </p>
 
           <form className="hero-input-form" onSubmit={(e) => { e.preventDefault(); handleLaunch(); }}>
             <div className="search-input-wrapper">
-              <span className="search-icon">🔍</span>
               <input
                 type="text"
                 placeholder="Describe a workflow you want to build..."
@@ -139,26 +138,26 @@ export const LandingPage = ({ navigate }) => {
                 value={promptInput}
                 onChange={(e) => setPromptInput(e.target.value)}
               />
-              <button type="button" className="search-submit-btn" onClick={handleLaunch}>
+              <button type="submit" className="search-submit-btn">
                 ➔
               </button>
             </div>
           </form>
 
-          <div className="suggestions-row">
-            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Translate CSV files using GPT-4o')}>
-              📁 Translate CSV with GPT-4
+          <div className="suggestions-row" style={{ display: 'flex', gap: '12px', justifyContent: 'center', marginBottom: '24px' }}>
+            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Automate Process')}>
+              <span style={{ marginRight: '6px' }}>📁</span> Automate Process
             </button>
-            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Trigger email alert when API fails')}>
-              📨 API Fail Email Alert
+            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Knowledge Retrieval')}>
+              <span style={{ marginRight: '6px' }}>💬</span> Knowledge Retrieval
             </button>
-            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Analyze customer sentiment and categorize')}>
-              🤖 Analyze Sentiment
+            <button className="suggestion-pill" onClick={() => handleSuggestionClick('Natural Search')}>
+              <span style={{ marginRight: '6px' }}>🔍</span> Natural Search
             </button>
           </div>
 
-          <div className="hero-footer-info">
-            <span className="shield-icon">🛡️</span> No credit card required. Free dev plan.
+          <div className="hero-footer-info" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
+            <span style={{ fontSize: '1rem' }}>💳</span> No credit card required
           </div>
         </div>
       </header>
@@ -290,6 +289,12 @@ export const LandingPage = ({ navigate }) => {
           </div>
         </div>
       </footer>
+
+      {/* Floating Chat IRL Badge */}
+      <div className="chat-irl-badge" onClick={handleLaunch}>
+        <span className="chat-irl-avatar">👩‍💼</span>
+        <span>Chat IRL</span>
+      </div>
     </div>
   );
 };

@@ -14,13 +14,13 @@ export const useStore = create((set, get) => ({
     ],
     edges: [
       { id: 'edge-customInput-1-llm-1', source: 'customInput-1', target: 'llm-1', type: 'smoothstep', animated: true },
-      { id: 'edge-llm-1-customOutput-1', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true },
-      { id: 'edge-loopback', source: 'customOutput-1', target: 'customInput-1', type: 'smoothstep', label: 'Response Loop', animated: true }
+      { id: 'edge-llm-1-customOutput-1', source: 'llm-1', target: 'customOutput-1', type: 'smoothstep', animated: true }
     ],
     nodeIDs: {
       customInput: 1,
       llm: 1,
-      customOutput: 1
+      customOutput: 1,
+      note: 0
     },
     activeNodeId: null,
     nodeStatuses: {}, // { [nodeId]: 'untouched' | 'success' | 'error' }
@@ -63,8 +63,14 @@ export const useStore = create((set, get) => ({
     },
 
     onNodesChange: (changes) => {
+      const currentNodes = applyNodeChanges(changes, get().nodes);
+      const remainingNodeIds = new Set(currentNodes.map(n => n.id));
+      const currentEdges = get().edges.filter(
+        e => remainingNodeIds.has(e.source) && remainingNodeIds.has(e.target)
+      );
       set({
-        nodes: applyNodeChanges(changes, get().nodes),
+        nodes: currentNodes,
+        edges: currentEdges,
       });
     },
 
@@ -75,13 +81,30 @@ export const useStore = create((set, get) => ({
     },
 
     onConnect: (connection) => {
+      const edges = get().edges;
+      const norm = (v) => v ?? 'default';
+      const sourceHandle = norm(connection.sourceHandle);
+      const targetHandle = norm(connection.targetHandle);
+
+      const duplicate = edges.find(
+        e =>
+          e.source === connection.source &&
+          e.target === connection.target &&
+          norm(e.sourceHandle) === sourceHandle &&
+          norm(e.targetHandle) === targetHandle
+      );
+      if (duplicate) return;
+
+      const edgeId = `edge-${connection.source}-${sourceHandle}-${connection.target}-${targetHandle}`;
+
       set({
         edges: addEdge({
           ...connection, 
+          id: edgeId,
           type: 'smoothstep', 
           animated: true, 
           markerEnd: {type: MarkerType.Arrow, height: '20px', width: '20px'}
-        }, get().edges),
+        }, edges),
       });
     },
 

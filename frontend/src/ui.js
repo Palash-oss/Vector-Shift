@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import ReactFlow, { Controls, Background, MiniMap } from 'reactflow';
+import ReactFlow, { Controls, Background } from 'reactflow';
 import { useStore } from './store';
 import { shallow } from 'zustand/shallow';
 import { InputNode } from './nodes/inputNode';
@@ -11,6 +11,7 @@ import { MathNode } from './nodes/mathNode';
 import { APIRequestNode } from './nodes/apiRequestNode';
 import { TimerNode } from './nodes/timerNode';
 import { ConditionalNode } from './nodes/conditionalNode';
+import { NoteNode } from './nodes/noteNode';
 import { NodePickerMenu } from './components/NodePickerMenu';
 
 import 'reactflow/dist/style.css';
@@ -27,6 +28,7 @@ const nodeTypes = {
   api: APIRequestNode,
   timer: TimerNode,
   conditional: ConditionalNode,
+  note: NoteNode,
 };
 
 const selector = (state) => ({
@@ -202,7 +204,6 @@ export const PipelineUI = () => {
             >
                 <Background color="rgba(255, 255, 255, 0.05)" gap={gridSize} size={1.5} />
                 <Controls />
-                <MiniMap />
             </ReactFlow>
 
             {/* Render Edge-Hover "+" buttons */}

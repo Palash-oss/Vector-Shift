@@ -13,7 +13,8 @@ import {
   Clock, 
   HelpCircle, 
   Trash2,
-  CheckCircle2
+  CheckCircle2,
+  StickyNote
 } from 'lucide-react';
 
 export const BaseNode = ({
@@ -64,6 +65,8 @@ export const BaseNode = ({
         return { category: 'Apps', icon: <Server size={14} />, class: 'category-apps' };
       case 'timer':
         return { category: 'Apps', icon: <Clock size={14} />, class: 'category-apps' };
+      case 'note':
+        return { category: 'Utility', icon: <StickyNote size={14} />, class: 'category-utility' };
       default:
         return { category: 'General', icon: <HelpCircle size={14} />, class: 'category-logic' };
     }
@@ -122,14 +125,35 @@ export const BaseNode = ({
 
         // Apply custom inline offset if system variables require it, otherwise center it
         let customStyle = { ...handle.style };
+
+        // If the handle was meant to be on the left/right and has a top/bottom position,
+        // translate that position to left so it spaces out horizontally at the top/bottom.
+        if (handle.position === Position.Left || handle.position === Position.Right) {
+          if (customStyle.top !== undefined && customStyle.left === undefined) {
+            customStyle.left = customStyle.top;
+          } else if (customStyle.bottom !== undefined && customStyle.left === undefined) {
+            customStyle.left = customStyle.bottom;
+          }
+        }
+
         if (isTop) {
-          customStyle.left = '50%';
+          if (customStyle.left === undefined) {
+            customStyle.left = '50%';
+            customStyle.transform = 'translateX(-50%)';
+          } else {
+            customStyle.transform = 'translateX(-50%)';
+          }
           customStyle.top = '-4px';
-          customStyle.transform = 'translateX(-50%)';
+          delete customStyle.bottom;
         } else {
-          customStyle.left = '50%';
+          if (customStyle.left === undefined) {
+            customStyle.left = '50%';
+            customStyle.transform = 'translateX(-50%)';
+          } else {
+            customStyle.transform = 'translateX(-50%)';
+          }
           customStyle.bottom = '-4px';
-          customStyle.transform = 'translateX(-50%)';
+          delete customStyle.top;
         }
 
         return (

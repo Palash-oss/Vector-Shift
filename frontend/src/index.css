@@ -26,6 +26,7 @@
   --color-api: #ec4899;         /* Pink */
   --color-timer: #14b8a6;       /* Teal */
   --color-conditional: #eab308; /* Yellow */
+  --color-note: #fbbf24;        /* Golden Amber Yellow */
 }
 
 body {
@@ -137,6 +138,8 @@ body {
 .canvas-container {
   flex-grow: 1;
   width: 100%;
+  height: 0;
+  min-height: 0;
   position: relative;
   background-color: var(--bg-app);
 }
@@ -144,6 +147,14 @@ body {
 /* React Flow Background override */
 .react-flow__background {
   background-color: var(--bg-app);
+}
+
+/* Remove default outline on focused canvas */
+.react-flow:focus,
+.react-flow:focus-visible,
+.react-flow__pane:focus {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 /* Base Node Layout */
@@ -180,6 +191,7 @@ body {
 .react-flow__node.selected .node-type-api { box-shadow: 0 0 15px rgba(236, 72, 153, 0.4); border-color: var(--color-api); }
 .react-flow__node.selected .node-type-timer { box-shadow: 0 0 15px rgba(20, 184, 166, 0.4); border-color: var(--color-timer); }
 .react-flow__node.selected .node-type-conditional { box-shadow: 0 0 15px rgba(234, 179, 8, 0.4); border-color: var(--color-conditional); }
+.react-flow__node.selected .node-type-note { box-shadow: 0 0 15px rgba(251, 191, 36, 0.4); border-color: var(--color-note); }
 
 /* Node Header colors based on type */
 .base-node.node-type-input { border-top: 4px solid var(--color-input); }
@@ -191,6 +203,7 @@ body {
 .base-node.node-type-api { border-top: 4px solid var(--color-api); }
 .base-node.node-type-timer { border-top: 4px solid var(--color-timer); }
 .base-node.node-type-conditional { border-top: 4px solid var(--color-conditional); }
+.base-node.node-type-note { border-top: 4px solid var(--color-note); }
 
 .node-header {
   padding: 10px 14px;
@@ -401,7 +414,8 @@ body {
 }
 
 .react-flow__edge:hover .react-flow__edge-path {
-  stroke: #94a3b8 !important;
+  stroke: #a5b4fc !important; /* Brighter premium Indigo hover glow */
+  stroke-width: 3px !important;
 }
 
 /* Submit Action container at the bottom */
@@ -410,7 +424,6 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  background: linear-gradient(to top, var(--bg-app) 40%, transparent);
   position: absolute;
   bottom: 0;
   left: 0;
@@ -1605,7 +1618,7 @@ body {
 .bottom-left-toolbar {
   position: absolute;
   bottom: 24px;
-  left: 24px;
+  left: 80px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -1764,6 +1777,7 @@ body {
 .node-icon-box.category-logic { background-color: rgba(234, 179, 8, 0.15); border: 1px solid rgba(234, 179, 8, 0.3); }
 .node-icon-box.category-data { background-color: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); }
 .node-icon-box.category-apps { background-color: rgba(236, 72, 153, 0.15); border: 1px solid rgba(236, 72, 153, 0.3); }
+.node-icon-box.category-utility { background-color: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); }
 
 .node-category-label {
   font-size: 0.65rem;
@@ -3184,3 +3198,356 @@ input, select, textarea, button {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ======================================================================
+   SCOPED LANDING PAGE OVERRIDES (LIGHT THEME & MOVING RED LIGHT)
+   ====================================================================== */
+.landing-wrapper {
+  background-color: #fcfcfc !important;
+  background-image: 
+    linear-gradient(rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.035) 1px, transparent 1px) !important;
+  background-size: 50px 50px !important;
+  background-position: center !important;
+  color: #111827 !important;
+  font-family: 'Outfit', 'Inter', sans-serif !important;
+  min-height: 100vh !important;
+  position: relative !important;
+  overflow-x: hidden !important;
+}
+
+/* Moving red light blob on the left */
+.landing-wrapper .moving-red-light {
+  position: absolute !important;
+  top: 10% !important;
+  left: -120px !important;
+  width: 450px !important;
+  height: 450px !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(239, 68, 68, 0.32) 0%, rgba(239, 68, 68, 0) 70%) !important;
+  filter: blur(50px) !important;
+  z-index: 1 !important; /* Above parent background, below text container */
+  pointer-events: none !important;
+  animation: moveLightLeft 8s infinite alternate ease-in-out !important;
+}
+
+.landing-wrapper .hero-container {
+  position: relative !important;
+  z-index: 2 !important; /* Force text content container on top of the glowing red blob */
+}
+
+@keyframes moveLightLeft {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(80px, 40px) scale(1.2);
+  }
+  100% {
+    transform: translate(160px, -20px) scale(1);
+  }
+}
+
+/* Navbar overrides */
+.landing-wrapper .landing-nav {
+  background-color: rgba(252, 252, 252, 0.8) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+}
+
+.landing-wrapper .landing-logo {
+  color: #111827 !important;
+}
+
+.landing-wrapper .logo-glow {
+  background: #ef4444 !important;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5) !important;
+}
+
+.landing-wrapper .nav-link {
+  color: #4b5563 !important;
+  font-weight: 500 !important;
+  font-size: 0.92rem !important;
+}
+
+.landing-wrapper .nav-link:hover {
+  color: #111827 !important;
+}
+
+.landing-wrapper .btn-ghost {
+  color: #374151 !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background-color: #fff !important;
+  border-radius: 8px !important;
+  padding: 8px 16px !important;
+  font-size: 0.88rem !important;
+  font-weight: 500 !important;
+}
+
+.landing-wrapper .btn-ghost:hover {
+  background-color: #f3f4f6 !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.landing-wrapper .btn-primary {
+  background: #ef4444 !important; /* bright red */
+  color: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  padding: 8px 18px !important;
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2) !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.landing-wrapper .btn-primary:hover {
+  background: #dc2626 !important;
+  box-shadow: 0 6px 14px rgba(239, 68, 68, 0.3) !important;
+}
+
+/* Hero Section overrides */
+.landing-wrapper .landing-hero {
+  background: none !important;
+  padding-top: 100px !important;
+  z-index: 5 !important;
+}
+
+.landing-wrapper .pill-badge {
+  background-color: rgba(239, 68, 68, 0.06) !important;
+  border: 1px solid rgba(239, 68, 68, 0.12) !important;
+  color: #dc2626 !important;
+  font-size: 0.78rem !important;
+}
+
+.landing-wrapper .pill-pulse {
+  background-color: #ef4444 !important;
+}
+
+.landing-wrapper .hero-title {
+  color: #111827 !important;
+  font-size: 4rem !important;
+  letter-spacing: -0.04em !important;
+  line-height: 1.1 !important;
+  font-weight: 800 !important;
+}
+
+.landing-wrapper .text-red {
+  color: #ef4444 !important;
+  background: none !important;
+  -webkit-text-fill-color: initial !important;
+}
+
+.landing-wrapper .hero-subtitle {
+  color: #6b7280 !important;
+  font-size: 1.1rem !important;
+  max-width: 680px !important;
+  line-height: 1.55 !important;
+  margin-bottom: 36px !important;
+}
+
+/* Search input overrides */
+.landing-wrapper .search-input-wrapper {
+  background-color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 16px -6px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 14px !important;
+  padding: 6px 6px 6px 14px !important;
+}
+
+.landing-wrapper .search-input {
+  color: #1f2937 !important;
+  font-size: 0.95rem !important;
+}
+
+.landing-wrapper .search-input::placeholder {
+  color: #9ca3af !important;
+}
+
+.landing-wrapper .search-submit-btn {
+  background: #ef4444 !important;
+  color: #fff !important;
+  border-radius: 8px !important;
+  width: 40px !important;
+  height: 40px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.1rem !important;
+  box-shadow: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: background 0.15s !important;
+}
+
+.landing-wrapper .search-submit-btn:hover {
+  background: #dc2626 !important;
+}
+
+/* Suggestions Row Pills overrides */
+.landing-wrapper .suggestion-pill {
+  background-color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #374151 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) !important;
+  font-weight: 500 !important;
+  font-size: 0.85rem !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+
+.landing-wrapper .suggestion-pill:hover {
+  background-color: #f9fafb !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-1px) !important;
+}
+
+.landing-wrapper .hero-footer-info {
+  color: #6b7280 !important;
+  font-size: 0.85rem !important;
+}
+
+/* Preview / Browser Frame style overrides */
+.landing-wrapper .browser-frame {
+  background-color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.08) !important;
+}
+
+.landing-wrapper .frame-header {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+.landing-wrapper .frame-address {
+  background-color: #f3f4f6 !important;
+  color: #4b5563 !important;
+}
+
+.landing-wrapper .frame-body {
+  background-color: #fafafa !important;
+}
+
+.landing-wrapper .mock-editor-overlay {
+  background-color: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.landing-wrapper .overlay-content h3 {
+  color: #111827 !important;
+}
+
+.landing-wrapper .overlay-content p {
+  color: #4b5563 !important;
+}
+
+.landing-wrapper .trust-bar {
+  background-color: #f9fafb !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.04) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+.landing-wrapper .trust-text {
+  color: #6b7280 !important;
+}
+
+.landing-wrapper .logo-wordmark {
+  color: #4b5563 !important;
+}
+
+/* Features section */
+.landing-wrapper .landing-features {
+  background-color: #fff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+.landing-wrapper .features-tab-pill {
+  color: #4b5563 !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  background-color: #f9fafb !important;
+}
+
+.landing-wrapper .features-tab-pill.active {
+  background-color: #ef4444 !important;
+  color: #fff !important;
+  border-color: #ef4444 !important;
+}
+
+.landing-wrapper .feature-eyebrow {
+  color: #ef4444 !important;
+}
+
+.landing-wrapper .feature-heading {
+  color: #111827 !important;
+}
+
+.landing-wrapper .feature-description {
+  color: #4b5563 !important;
+}
+
+.landing-wrapper .feature-link {
+  color: #ef4444 !important;
+}
+
+.landing-wrapper .activity-item-card {
+  background-color: #fff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02) !important;
+}
+
+.landing-wrapper .activity-label {
+  color: #111827 !important;
+}
+
+.landing-wrapper .activity-time {
+  color: #9ca3af !important;
+}
+
+.landing-wrapper .activity-sub {
+  color: #4b5563 !important;
+}
+
+.landing-wrapper .landing-footer {
+  background-color: #f9fafb !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.04) !important;
+  color: #6b7280 !important;
+}
+
+.landing-wrapper .footer-links a {
+  color: #4b5563 !important;
+}
+
+.landing-wrapper .footer-links a:hover {
+  color: #111827 !important;
+}
+
+/* Floating Chat IRL Badge */
+.chat-irl-badge {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  background-color: #ef4444; /* red */
+  color: #fff;
+  padding: 8px 16px 8px 12px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+  z-index: 100;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.chat-irl-badge:hover {
+  transform: scale(1.05);
+}
+
+.chat-irl-avatar {
+  font-size: 1.1rem;
+}
+
